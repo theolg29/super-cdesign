@@ -1,0 +1,14 @@
+{
+  "name": "super-cdesign-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Serveur local de Super CDesign : sert les exports HTML de Claude Design sur le Wi-Fi pour les tester sur un vrai téléphone.",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4"
+  }
+}

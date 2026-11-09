@@ -1,0 +1,73 @@
+/* Page claude.ai/artifact/... : barre « Contrôles de l'artéfact » */
+html[data-superdesign="on"] #hdr,
+html[data-superdesign="on"] #top-edge,
+html[data-superdesign="on"] #hdr-degraded {
+  display: none !important;
+}
+
+/* Le contenu est positionné en absolute sous la barre (top: 45px) : on le remonte. */
+html[data-superdesign="on"] body > main {
+  top: 0 !important;
+}
+
+/* Fenêtre « Preview mobile » (QR code du serveur local) */
+.superdesign-pop {
+  --sd-bg: #ffffff;
+  --sd-text: #1f1e1d;
+  --sd-muted: #6b6a68;
+  --sd-line: rgba(31, 30, 29, 0.12);
+  --sd-code: rgba(31, 30, 29, 0.06);
+  position: fixed;
+  z-index: 2147483000;
+  width: 300px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--sd-bg);
+  color: var(--sd-text);
+  border: 1px solid var(--sd-line);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  text-align: left;
+}
+@media (prefers-color-scheme: dark) {
+  .superdesign-pop {
+    --sd-bg: #262624;
+    --sd-text: #f1f0ec;
+    --sd-muted: #a3a29d;
+    --sd-line: rgba(255, 255, 255, 0.1);
+    --sd-code: rgba(255, 255, 255, 0.07);
+  }
+}
+.superdesign-pop p { margin: 0 0 8px; }
+.superdesign-pop__eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sd-muted);
+}
+.superdesign-pop__title { font-size: 15px; font-weight: 600; }
+.superdesign-pop__msg { color: var(--sd-muted); }
+.superdesign-pop__qr {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 4px 0 10px;
+}
+.superdesign-pop__qr svg { display: block; width: 100%; height: auto; }
+.superdesign-pop__url {
+  display: block;
+  margin: 0 0 10px;
+  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--sd-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
+.superdesign-pop__code {
+  display: block;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--sd-code);
+  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}

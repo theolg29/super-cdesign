@@ -21,11 +21,10 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { watch } from 'node:fs';
-import { execFile, spawn } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
-import makeMdns from 'multicast-dns';
 
 const run = promisify(execFile);
 const PORT = Number(process.env.PORT) || 4321;
@@ -35,8 +34,6 @@ const PROJECT_DIR = path.resolve(SERVER_DIR, '..');
 // server/config.json (exclu de git). Les variables d'environnement priment.
 const CONFIG_FILE = path.join(SERVER_DIR, 'config.json');
 const DEFAULT_DIR = path.join(PROJECT_DIR, 'super-cdesign-exports');
-const DEFAULT_HOST = 'cdesign';
-const cleanHost = (h) => String(h || '').toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').slice(0, 40);
 let config = {};
 try {
   config = JSON.parse(await fs.readFile(CONFIG_FILE, 'utf8'));
@@ -91,83 +88,8 @@ function lanAddress() {
     candidates[0];
   return pref ? pref.address : '127.0.0.1';
 }
-// Nom annoncé sur le réseau local (Bonjour / mDNS) : http://cdesign.local/
-let HOST = `${cleanHost(process.env.SUPERDESIGN_HOST || config.host) || DEFAULT_HOST}.local`;
 let port80 = false; // vrai si le serveur écoute aussi sur le port 80 (adresse sans « :4321 »)
-const portSuffix = () => (port80 ? '' : `:${PORT}`);
-const homeUrl = () => `http://${HOST}${portSuffix()}/`;
-const ipUrl = () => `http://${lanAddress()}${portSuffix()}/`;
-
-// Annonce de HOST sur le réseau local (Bonjour / mDNS).
-// - macOS : par le service Bonjour du système (dns-sd -P), comme une
-//   imprimante ou AirPlay ; c'est le seul moyen fiable d'être vu par les
-//   autres appareils (un second répondeur sur le port 5353 ne l'est pas).
-// - Windows, Linux : répondeur intégré (multicast-dns).
-// Android ne résout pas toujours les noms en .local : le QR code pointe donc
-// vers l'adresse IP, et l'accueil bascule sur HOST s'il répond.
-let mdns = null;
-let dnssd = null;
-let dnssdStopping = false;
-const aRecord = () => ({ name: HOST, type: 'A', ttl: 120, flush: true, data: lanAddress() });
-// Réponse négative (NSEC) : « pas d'adresse IPv6 », sinon le client attend
-// une réponse AAAA plusieurs secondes avant de se rabattre sur l'IPv4.
-const noIpv6 = () => ({ name: HOST, type: 'NSEC', ttl: 120, flush: true, data: { nextDomain: HOST, rrtypes: ['A'] } });
-
-function publishWithDnsSd() {
-  if (dnssd) {
-    dnssdStopping = true;
-    dnssd.kill();
-  }
-  dnssdStopping = false;
-  const child = spawn('dns-sd', ['-P', 'Super CDesign', '_http._tcp', 'local', String(PORT), HOST, lanAddress()], { stdio: 'ignore' });
-  dnssd = child;
-  child.on('error', (e) => console.warn(`! dns-sd : ${e.message}`));
-  child.on('exit', () => {
-    if (dnssd !== child || dnssdStopping) return;
-    dnssd = null;
-    setTimeout(publishWithDnsSd, 5000); // arrêt inattendu : on republie
-  });
-}
-const stopDnsSd = () => {
-  dnssdStopping = true;
-  if (dnssd) dnssd.kill();
-  dnssd = null;
-};
-process.on('exit', stopDnsSd);
-for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => process.exit(0));
-
-const announce = () => {
-  if (process.platform === 'darwin') return publishWithDnsSd();
-  if (mdns) mdns.respond({ answers: [aRecord()], additionals: [noIpv6()] });
-};
-
-function startMdns() {
-  if (process.platform !== 'darwin') {
-    try {
-      mdns = makeMdns();
-    } catch (e) {
-      console.warn(`! mDNS indisponible (${e.message}) : utilise l'adresse IP.`);
-      return;
-    }
-    mdns.on('query', (q) => {
-      const asked = q.questions.filter((x) => x.name.toLowerCase() === HOST);
-      if (!asked.length) return;
-      if (asked.some((x) => x.type === 'A' || x.type === 'ANY')) mdns.respond({ answers: [aRecord()], additionals: [noIpv6()] });
-      else if (asked.some((x) => x.type === 'AAAA')) mdns.respond({ answers: [noIpv6()], additionals: [aRecord()] });
-    });
-    mdns.on('error', (e) => console.warn(`! mDNS : ${e.message}`));
-  }
-  // Annonce au démarrage, puis à chaque changement d'adresse IP.
-  announce();
-  let last = lanAddress();
-  setInterval(() => {
-    const now = lanAddress();
-    if (now !== last) {
-      last = now;
-      announce();
-    }
-  }, 10000);
-}
+const homeUrl = () => `http://${lanAddress()}${port80 ? '' : `:${PORT}`}/`;
 
 // --- Projets --------------------------------------------------------------------
 
@@ -428,8 +350,6 @@ async function enableAutostart(servers) {
   // Passe la main à launchd : on libère les ports, launchd relance le serveur.
   setTimeout(async () => {
     for (const srv of servers) srv.close();
-    if (mdns) mdns.destroy();
-    stopDnsSd();
     const uid = process.getuid();
     await run('launchctl', ['bootout', `gui/${uid}/${AGENT_LABEL}`]).catch(() => {});
     await run('launchctl', ['bootstrap', `gui/${uid}`, AGENT_PLIST]).catch((e) => console.warn(`! launchctl : ${e.message}`));
@@ -480,13 +400,9 @@ async function pickFolder() {
 }
 
 async function configPayload() {
-  const scanUrl = ipUrl();
+  const scanUrl = homeUrl();
   return {
-    host: HOST.replace(/\.local$/, ''),
-    defaultHost: DEFAULT_HOST,
-    hostLocked: !!process.env.SUPERDESIGN_HOST,
     url: homeUrl(),
-    ipUrl: scanUrl,
     port80,
     svg: await QRCode.toString(scanUrl, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#111111', light: '#ffffff' } }),
     dir: WATCH_DIR,
@@ -606,13 +522,6 @@ ${sections}
   var ro = new ResizeObserver(function(entries){ entries.forEach(function(e){ e.target.style.setProperty('--s', e.contentRect.width / 390); }); });
   document.querySelectorAll('.thumb').forEach(function(t){ ro.observe(t); });
   document.querySelectorAll('.thumb iframe').forEach(function(f){ f.addEventListener('load', function(){ setTimeout(function(){ f.classList.add('ready'); }, 250); }); });
-  // Ouvert par l'adresse IP (QR code) : bascule sur le nom propre s'il répond sur ce téléphone.
-  var nice=${JSON.stringify(homeUrl())};
-  if (location.hostname !== ${JSON.stringify(HOST)}) {
-    var ctl = window.AbortController ? new AbortController() : null;
-    if (ctl) setTimeout(function(){ ctl.abort(); }, 1500);
-    fetch(nice + 'api/ping', { cache: 'no-store', signal: ctl ? ctl.signal : undefined }).then(function(r){ if (r.ok) location.replace(nice); }).catch(function(){});
-  }
   var v=${globalVersion};
   setInterval(function(){fetch('/api/state',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){if(d.version!==v)location.reload()}).catch(function(){})},2000);
 })();
@@ -675,30 +584,17 @@ const server = http.createServer(async (req, res) => {
     const p = url.pathname;
     let m;
 
-    // Accessible à tous : test de joignabilité de cdesign.local depuis l'accueil.
-    if (p === '/api/ping') {
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
-      return res.end(JSON.stringify({ ok: true, host: HOST }));
-    }
-
     // Réglages et QR code : uniquement l'extension, sur ce Mac.
     if (['/api/qr', '/api/config', '/api/open-folder', '/api/pick-folder', '/api/autostart', '/api/delete', '/api/delete-all'].includes(p)) {
       if (!trusted(req)) return send(res, 403, { error: 'Réservé à l’extension, sur cet ordinateur' });
       if (p === '/api/qr' && req.method === 'GET') {
         const c = await configPayload();
-        return send(res, 200, { url: c.url, ipUrl: c.ipUrl, svg: c.svg, dir: c.dir });
+        return send(res, 200, { url: c.url, svg: c.svg, dir: c.dir });
       }
       if (p === '/api/config' && req.method === 'GET') return send(res, 200, await configPayload());
       if (req.method !== 'POST') return send(res, 405, { error: 'Méthode non autorisée' });
       const body = await readJson(req);
       if (p === '/api/config') {
-        if (body.host !== undefined && !process.env.SUPERDESIGN_HOST) {
-          const h = cleanHost(body.host);
-          if (!h) return send(res, 400, { error: 'Nom invalide : lettres, chiffres et tirets' });
-          HOST = `${h}.local`;
-          config.host = h === DEFAULT_HOST ? undefined : h;
-          announce();
-        }
         if (body.dir !== undefined && !process.env.SUPERDESIGN_DIR) {
           let dir;
           try {
@@ -791,9 +687,8 @@ server.listen(PORT, '0.0.0.0', () => {
     altServer = alt;
     report();
   });
-  startMdns();
 });
 function report() {
-  console.log(`Super CDesign : ${homeUrl()}  (ou ${ipUrl()})`);
+  console.log(`Super CDesign : ${homeUrl()}`);
   console.log(`Dossier surveillé : ${WATCH_DIR}`);
 }

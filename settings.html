@@ -34,10 +34,9 @@ npm start</code></pre>
       <div class="qr" id="qr" role="img" aria-label="QR code de l’accueil"></div>
       <div>
         <h2>Ouvrir sur un téléphone</h2>
-        <p class="muted">Scanne le QR code avec n’importe quel téléphone connecté au même Wi-Fi. Il marche partout, Android compris.</p>
+        <p class="muted">Scanne le QR code avec n’importe quel téléphone connecté au même Wi-Fi, ou tape l’adresse dans son navigateur.</p>
         <p class="label">Adresse à taper</p>
         <p class="url"><a id="url" href="#" target="_blank" rel="noopener"></a></p>
-        <p class="muted small" id="ip"></p>
         <div class="row">
           <button class="btn" id="copy" type="button">Copier l’adresse</button>
           <a class="btn ghost" id="open-home" href="#" target="_blank" rel="noopener">Ouvrir l’accueil</a>
@@ -48,17 +47,6 @@ npm start</code></pre>
     <!-- Réglages -->
     <section class="card">
       <h2>Réglages</h2>
-
-      <form class="field" id="host-form">
-        <label for="host">Nom de l’adresse</label>
-        <div class="inline">
-          <span class="affix">http://</span>
-          <input id="host" name="host" autocomplete="off" spellcheck="false" maxlength="40" pattern="[a-zA-Z0-9-]+" required>
-          <span class="affix">.local</span>
-          <button class="btn" type="submit">Enregistrer</button>
-        </div>
-        <p class="hint" id="host-hint">Lettres, chiffres et tirets. Après un changement, rescanne le QR code.</p>
-      </form>
 
       <div class="field">
         <label>Dossier des exports</label>

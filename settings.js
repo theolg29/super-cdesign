@@ -47,14 +47,6 @@ function render(c) {
   $('url').textContent = shortUrl(c.url);
   $('url').href = c.url;
   $('open-home').href = c.url;
-  $('ip').textContent = `Adresse IP : ${shortUrl(c.ipUrl)} (si un appareil ne reconnaît pas le nom)`;
-
-  // Nom de l'adresse
-  if (document.activeElement !== $('host')) $('host').value = c.host;
-  $('host').disabled = c.hostLocked;
-  $('host-hint').textContent = c.hostLocked
-    ? 'Fixé par la variable SUPERDESIGN_HOST au lancement du serveur.'
-    : 'Lettres, chiffres et tirets. Après un changement, rescanne le QR code.';
 
   // Dossier
   $('dir').textContent = c.dir;
@@ -175,11 +167,6 @@ async function act(fn, okText) {
     busy = false;
   }
 }
-
-$('host-form').addEventListener('submit', (e) => {
-  e.preventDefault();
-  act(() => api('/api/config', { host: $('host').value }), 'Nom enregistré. Rescanne le QR code sur les téléphones.');
-});
 
 $('copy').addEventListener('click', async () => {
   try {

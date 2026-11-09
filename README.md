@@ -45,8 +45,8 @@ Le bouton et l'option n'apparaissent que pour un artéfact **publié** (il faut 
 <p align="center"><img src="docs/preview-mobile.png" alt="Preview mobile : les étapes et l'accueil sur le téléphone avec un aperçu de chaque page" width="100%"></p>
 
 - Un **petit serveur local** sert sur ton Wi-Fi les exports HTML de tes designs.
-- Le **bouton téléphone** dans l'en-tête du panneau d'artéfact affiche son **QR code** : n'importe quel téléphone du Wi-Fi le scanne, Android compris. L'adresse à taper est simplement **`http://cdesign.local/`**.
-- **Un clic sur l'icône de l'extension** ouvre la page de réglages : état du serveur, QR code, projets, dossier des exports (l'ouvrir, en choisir un autre), nom de l'adresse, et **démarrage automatique avec le Mac**.
+- Le **bouton téléphone** dans l'en-tête du panneau d'artéfact affiche son **QR code** : n'importe quel téléphone du même Wi-Fi le scanne. Tu peux aussi taper l'adresse du Mac, par ex. `http://192.168.1.20/`.
+- **Un clic sur l'icône de l'extension** ouvre la page de réglages : état du serveur, QR code, projets, dossier des exports (l'ouvrir, en choisir un autre), aperçus et suppression des pages, et **démarrage automatique avec le Mac**.
 - Sur le téléphone, l'accueil montre **tes projets avec un aperçu de chaque page** ; touche une page pour l'ouvrir en plein écran.
 - **Les liens entre pages fonctionnent** quand les pages sont dans le même projet.
 - Quand tu remplaces un export, **le téléphone se recharge tout seul**.
@@ -73,14 +73,12 @@ npm install
 npm start
 ```
 
-Le terminal affiche l'adresse du serveur, **`http://cdesign.local/`** (et l'adresse IP en secours), et le dossier surveillé : `super-cdesign-exports/`, à la racine du projet (créé au premier lancement). Laisse le terminal ouvert.
+Le terminal affiche l'adresse du serveur (l'adresse IP du Mac sur le Wi-Fi, par ex. `http://192.168.1.20/`) et le dossier surveillé : `super-cdesign-exports/`, à la racine du projet (créé au premier lancement). Laisse le terminal ouvert.
 
 - Pour surveiller un autre dossier : `SUPERDESIGN_DIR=/chemin/vers/dossier npm start`.
-- Le serveur s'annonce sur le Wi-Fi sous le nom `cdesign.local` (Bonjour / mDNS). Pour un autre nom : `SUPERDESIGN_HOST=monnom npm start` → `monnom.local`.
-- Il écoute sur le port 4321 et, quand c'est possible (macOS, Windows), aussi sur le port 80 : d'où l'adresse sans `:4321`. Sous Linux, ce sera `http://cdesign.local:4321/`.
-- Le QR code pointe vers l'adresse IP du Mac, que tous les téléphones savent ouvrir ; l'accueil bascule ensuite tout seul sur `cdesign.local` quand l'appareil reconnaît ce nom (iPhone, Mac, Windows, Linux ; certains Android non).
+- Il écoute sur le port 4321 et, quand c'est possible (macOS, Windows), aussi sur le port 80 : d'où l'adresse sans `:4321`. Sous Linux, ce sera `http://<IP>:4321/`.
 - **Démarrage automatique (macOS)** : clique sur l'icône de l'extension, puis active « Démarrer avec le Mac ». Le serveur se lance alors à chaque ouverture de session et redémarre s'il s'arrête : plus besoin de terminal.
-- Le dossier des exports et le nom de l'adresse se changent aussi depuis cette page (enregistrés dans `server/config.json`).
+- Le dossier des exports se change aussi depuis cette page (enregistré dans `server/config.json`).
 - Pour changer de port : `PORT=5000 npm start` (le bouton de l'extension attend le port 4321).
 - Au premier lancement, macOS peut demander d'autoriser les connexions entrantes pour `node` : accepte, c'est ce qui permet au téléphone de joindre l'ordinateur.
 

@@ -79,9 +79,8 @@ npm start
   ```bash
   curl -s http://localhost:4321/api/qr
   ```
-  La réponse est un JSON avec `url` (normalement `http://cdesign.local/`), `ipUrl` (l'adresse IP de secours) et `dir` (le dossier surveillé).
-- Le terminal affiche l'adresse du serveur, `http://cdesign.local/` (annoncée sur le Wi-Fi par Bonjour / mDNS, avec l'adresse IP en secours), et le dossier surveillé : `<DOSSIER>/super-cdesign-exports/`, créé automatiquement.
-- Si un téléphone Android n'ouvre pas `cdesign.local`, il faut utiliser l'adresse IP affichée en secours.
+  La réponse est un JSON avec `url` (l'adresse du serveur sur le Wi-Fi, par ex. `http://192.168.1.20/`) et `dir` (le dossier surveillé).
+- Le terminal affiche l'adresse du serveur (l'adresse IP de l'ordinateur sur le Wi-Fi) et le dossier surveillé : `<DOSSIER>/super-cdesign-exports/`, créé automatiquement.
 - Au premier lancement, macOS (ou le pare-feu Windows) peut demander d'autoriser les connexions entrantes pour `node` : l'utilisateur doit accepter, sinon le téléphone ne pourra pas joindre l'ordinateur.
 
 Explique ensuite à l'utilisateur comment s'en servir :
@@ -97,7 +96,7 @@ Explique ensuite à l'utilisateur comment s'en servir :
 
 Sans démarrage automatique (Windows, Linux, ou si l'utilisateur refuse), il relance le serveur avec `cd "<DOSSIER>/server" && npm start`.
 
-La page de réglages (clic sur l'icône de l'extension) permet aussi d'ouvrir le dossier des exports, d'en choisir un autre et de changer le nom de l'adresse.
+La page de réglages (clic sur l'icône de l'extension) permet aussi d'ouvrir le dossier des exports, d'en choisir un autre, et de voir ou supprimer les pages.
 
 ## Étape 7 — Résumé final
 

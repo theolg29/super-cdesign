@@ -21,7 +21,7 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { watch } from 'node:fs';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
@@ -98,31 +98,66 @@ const portSuffix = () => (port80 ? '' : `:${PORT}`);
 const homeUrl = () => `http://${HOST}${portSuffix()}/`;
 const ipUrl = () => `http://${lanAddress()}${portSuffix()}/`;
 
-// Répond aux requêtes mDNS pour HOST avec l'adresse IPv4 du Mac. iOS, macOS,
-// Windows et Linux résolvent les noms en .local ; Android pas toujours : le QR
-// code pointe donc vers l'adresse IP, et l'accueil bascule sur HOST s'il répond.
+// Annonce de HOST sur le réseau local (Bonjour / mDNS).
+// - macOS : par le service Bonjour du système (dns-sd -P), comme une
+//   imprimante ou AirPlay ; c'est le seul moyen fiable d'être vu par les
+//   autres appareils (un second répondeur sur le port 5353 ne l'est pas).
+// - Windows, Linux : répondeur intégré (multicast-dns).
+// Android ne résout pas toujours les noms en .local : le QR code pointe donc
+// vers l'adresse IP, et l'accueil bascule sur HOST s'il répond.
 let mdns = null;
+let dnssd = null;
+let dnssdStopping = false;
 const aRecord = () => ({ name: HOST, type: 'A', ttl: 120, flush: true, data: lanAddress() });
 // Réponse négative (NSEC) : « pas d'adresse IPv6 », sinon le client attend
 // une réponse AAAA plusieurs secondes avant de se rabattre sur l'IPv4.
 const noIpv6 = () => ({ name: HOST, type: 'NSEC', ttl: 120, flush: true, data: { nextDomain: HOST, rrtypes: ['A'] } });
-const announce = () => mdns && mdns.respond({ answers: [aRecord()], additionals: [noIpv6()] });
+
+function publishWithDnsSd() {
+  if (dnssd) {
+    dnssdStopping = true;
+    dnssd.kill();
+  }
+  dnssdStopping = false;
+  const child = spawn('dns-sd', ['-P', 'Super CDesign', '_http._tcp', 'local', String(PORT), HOST, lanAddress()], { stdio: 'ignore' });
+  dnssd = child;
+  child.on('error', (e) => console.warn(`! dns-sd : ${e.message}`));
+  child.on('exit', () => {
+    if (dnssd !== child || dnssdStopping) return;
+    dnssd = null;
+    setTimeout(publishWithDnsSd, 5000); // arrêt inattendu : on republie
+  });
+}
+const stopDnsSd = () => {
+  dnssdStopping = true;
+  if (dnssd) dnssd.kill();
+  dnssd = null;
+};
+process.on('exit', stopDnsSd);
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => process.exit(0));
+
+const announce = () => {
+  if (process.platform === 'darwin') return publishWithDnsSd();
+  if (mdns) mdns.respond({ answers: [aRecord()], additionals: [noIpv6()] });
+};
 
 function startMdns() {
-  try {
-    mdns = makeMdns();
-  } catch (e) {
-    console.warn(`! mDNS indisponible (${e.message}) : utilise l'adresse IP.`);
-    return;
+  if (process.platform !== 'darwin') {
+    try {
+      mdns = makeMdns();
+    } catch (e) {
+      console.warn(`! mDNS indisponible (${e.message}) : utilise l'adresse IP.`);
+      return;
+    }
+    mdns.on('query', (q) => {
+      const asked = q.questions.filter((x) => x.name.toLowerCase() === HOST);
+      if (!asked.length) return;
+      if (asked.some((x) => x.type === 'A' || x.type === 'ANY')) mdns.respond({ answers: [aRecord()], additionals: [noIpv6()] });
+      else if (asked.some((x) => x.type === 'AAAA')) mdns.respond({ answers: [noIpv6()], additionals: [aRecord()] });
+    });
+    mdns.on('error', (e) => console.warn(`! mDNS : ${e.message}`));
   }
-  mdns.on('query', (q) => {
-    const asked = q.questions.filter((x) => x.name.toLowerCase() === HOST);
-    if (!asked.length) return;
-    if (asked.some((x) => x.type === 'A' || x.type === 'ANY')) mdns.respond({ answers: [aRecord()], additionals: [noIpv6()] });
-    else if (asked.some((x) => x.type === 'AAAA')) mdns.respond({ answers: [noIpv6()], additionals: [aRecord()] });
-  });
-  mdns.on('error', (e) => console.warn(`! mDNS : ${e.message}`));
-  // Annonce au démarrage, puis à chaque changement de réseau.
+  // Annonce au démarrage, puis à chaque changement d'adresse IP.
   announce();
   let last = lanAddress();
   setInterval(() => {
@@ -394,6 +429,7 @@ async function enableAutostart(servers) {
   setTimeout(async () => {
     for (const srv of servers) srv.close();
     if (mdns) mdns.destroy();
+    stopDnsSd();
     const uid = process.getuid();
     await run('launchctl', ['bootout', `gui/${uid}/${AGENT_LABEL}`]).catch(() => {});
     await run('launchctl', ['bootstrap', `gui/${uid}`, AGENT_PLIST]).catch((e) => console.warn(`! launchctl : ${e.message}`));

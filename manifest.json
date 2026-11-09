@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Super CDesign",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "description": "Super Claude Design : présente un design Claude sans l'interface de Claude et le prévisualise sur un vrai téléphone par QR code. Fonctionne sur claude.ai (version web).",
   "icons": {
     "16": "icons/icon16.png",

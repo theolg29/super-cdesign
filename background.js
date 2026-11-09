@@ -2,7 +2,7 @@
 // (Seul le service worker peut joindre localhost : la page claude.ai en est
 // empêchée par sa CSP et par les restrictions d'accès au réseau local.)
 
-const SERVER = 'http://localhost:4321';
+const SERVER = 'http://localhost:5757';
 
 async function qr() {
   try {

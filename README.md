@@ -45,7 +45,7 @@ Le bouton et l'option n'apparaissent que pour un artéfact **publié** (il faut 
 <p align="center"><img src="docs/preview-mobile.png" alt="Preview mobile : les étapes et l'accueil sur le téléphone avec un aperçu de chaque page" width="100%"></p>
 
 - Un **petit serveur local** sert sur ton Wi-Fi les exports HTML de tes designs.
-- Le **bouton téléphone** dans l'en-tête du panneau d'artéfact affiche son **QR code** : n'importe quel téléphone du même Wi-Fi le scanne. Tu peux aussi taper l'adresse du Mac, par ex. `http://192.168.1.20/`.
+- Le **bouton téléphone** dans l'en-tête du panneau d'artéfact affiche son **QR code** : n'importe quel téléphone du même Wi-Fi le scanne. Tu peux aussi taper l'adresse du Mac, par ex. `http://192.168.1.20:5757/`.
 - **Un clic sur l'icône de l'extension** ouvre la page de réglages : état du serveur, QR code, projets, dossier des exports (l'ouvrir, en choisir un autre), aperçus et suppression des pages, et **démarrage automatique avec le Mac**.
 - Sur le téléphone, l'accueil montre **tes projets avec un aperçu de chaque page** ; touche une page pour l'ouvrir en plein écran.
 - **Les liens entre pages fonctionnent** quand les pages sont dans le même projet.
@@ -73,13 +73,13 @@ npm install
 npm start
 ```
 
-Le terminal affiche l'adresse du serveur (l'adresse IP du Mac sur le Wi-Fi, par ex. `http://192.168.1.20/`) et le dossier surveillé : `super-cdesign-exports/`, à la racine du projet (créé au premier lancement). Laisse le terminal ouvert.
+Le terminal affiche l'adresse du serveur (l'adresse IP du Mac sur le Wi-Fi, par ex. `http://192.168.1.20:5757/`) et le dossier surveillé : `super-cdesign-exports/`, à la racine du projet (créé au premier lancement). Laisse le terminal ouvert.
 
 - Pour surveiller un autre dossier : `SUPERDESIGN_DIR=/chemin/vers/dossier npm start`.
-- Il écoute sur le port 4321 et, quand c'est possible (macOS, Windows), aussi sur le port 80 : d'où l'adresse sans `:4321`. Sous Linux, ce sera `http://<IP>:4321/`.
+- Il écoute sur le port **5757**, choisi pour ne gêner aucun outil courant (MAMP, Docker, Astro, Vite…).
 - **Démarrage automatique (macOS)** : clique sur l'icône de l'extension, puis active « Démarrer avec le Mac ». Le serveur se lance alors à chaque ouverture de session et redémarre s'il s'arrête : plus besoin de terminal.
 - Le dossier des exports se change aussi depuis cette page (enregistré dans `server/config.json`).
-- Pour changer de port : `PORT=5000 npm start` (le bouton de l'extension attend le port 4321).
+- Pour changer de port : `PORT=5858 npm start` (le bouton de l'extension et la page de réglages attendent le port 5757).
 - Au premier lancement, macOS peut demander d'autoriser les connexions entrantes pour `node` : accepte, c'est ce qui permet au téléphone de joindre l'ordinateur.
 
 Le serveur tourne sur macOS, Linux et Windows 10+ (il utilise `unzip`, ou `tar` sur Windows).

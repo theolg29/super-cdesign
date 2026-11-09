@@ -77,9 +77,9 @@ npm start
 
 - Le serveur doit rester lancé : si tu exécutes les commandes toi-même, lance-le en arrière-plan ou dans un terminal séparé, puis vérifie qu'il répond :
   ```bash
-  curl -s http://localhost:4321/api/qr
+  curl -s http://localhost:5757/api/qr
   ```
-  La réponse est un JSON avec `url` (l'adresse du serveur sur le Wi-Fi, par ex. `http://192.168.1.20/`) et `dir` (le dossier surveillé).
+  La réponse est un JSON avec `url` (l'adresse du serveur sur le Wi-Fi, par ex. `http://192.168.1.20:5757/`) et `dir` (le dossier surveillé).
 - Le terminal affiche l'adresse du serveur (l'adresse IP de l'ordinateur sur le Wi-Fi) et le dossier surveillé : `<DOSSIER>/super-cdesign-exports/`, créé automatiquement.
 - Au premier lancement, macOS (ou le pare-feu Windows) peut demander d'autoriser les connexions entrantes pour `node` : l'utilisateur doit accepter, sinon le téléphone ne pourra pas joindre l'ordinateur.
 
@@ -92,7 +92,7 @@ Explique ensuite à l'utilisateur comment s'en servir :
 
 **Démarrage automatique (macOS, recommandé)** : propose-le à l'utilisateur, pour qu'il n'ait plus jamais à lancer le serveur. Deux façons :
 - il clique sur l'icône de l'extension Super CDesign dans Chrome, puis active « Démarrer avec le Mac » ;
-- ou, si tu exécutes les commandes, avec son accord : `curl -s -X POST -d '{"enabled":true}' http://localhost:4321/api/autostart`. Le serveur passe alors la main à launchd (agent `com.supercdesign.server`) et redémarre tout seul en quelques secondes.
+- ou, si tu exécutes les commandes, avec son accord : `curl -s -X POST -d '{"enabled":true}' http://localhost:5757/api/autostart`. Le serveur passe alors la main à launchd (agent `com.supercdesign.server`) et redémarre tout seul en quelques secondes.
 
 Sans démarrage automatique (Windows, Linux, ou si l'utilisateur refuse), il relance le serveur avec `cd "<DOSSIER>/server" && npm start`.
 

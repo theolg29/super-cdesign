@@ -27,7 +27,8 @@ import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 
 const run = promisify(execFile);
-const PORT = Number(process.env.PORT) || 4321;
+// Port peu courant, pour ne gêner aucun autre outil (80, 3000, 4321, 5173, 8080…).
+const PORT = Number(process.env.PORT) || 5757;
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIR = path.resolve(SERVER_DIR, '..');
 // Réglages modifiables depuis la page de l'extension, enregistrés dans
@@ -88,8 +89,7 @@ function lanAddress() {
     candidates[0];
   return pref ? pref.address : '127.0.0.1';
 }
-let port80 = false; // vrai si le serveur écoute aussi sur le port 80 (adresse sans « :4321 »)
-const homeUrl = () => `http://${lanAddress()}${port80 ? '' : `:${PORT}`}/`;
+const homeUrl = () => `http://${lanAddress()}:${PORT}/`;
 
 // --- Projets --------------------------------------------------------------------
 
@@ -403,7 +403,6 @@ async function configPayload() {
   const scanUrl = homeUrl();
   return {
     url: homeUrl(),
-    port80,
     svg: await QRCode.toString(scanUrl, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#111111', light: '#ffffff' } }),
     dir: WATCH_DIR,
     defaultDir: DEFAULT_DIR,
@@ -576,7 +575,6 @@ const isLocal = (req) => /^(::1|127\.0\.0\.1|::ffff:127\.0\.0\.1)$/.test(req.soc
 // Requête de l'extension (Origin chrome-extension://) ou d'un outil local sans
 // Origin ; jamais d'un site web ouvert dans le navigateur.
 const trusted = (req) => isLocal(req) && (!req.headers.origin || req.headers.origin.startsWith('chrome-extension://'));
-let altServer = null;
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -638,7 +636,7 @@ const server = http.createServer(async (req, res) => {
         if (!autostartSupported) return send(res, 400, { error: 'Disponible sur macOS uniquement' });
         if (body.enabled) {
           send(res, 200, { ok: true, restarting: true });
-          return enableAutostart([server, altServer].filter(Boolean));
+          return enableAutostart([server]);
         }
         await disableAutostart();
         return send(res, 200, { ok: true });
@@ -677,18 +675,14 @@ await scan();
 let watcher = watch(WATCH_DIR, { recursive: true }, scheduleScan);
 setInterval(scan, 5000); // filet de sécurité si un événement du système de fichiers est manqué
 
-server.listen(PORT, '0.0.0.0', () => {
-  // Port 80 en plus (adresse sans numéro de port) : possible sans droits
-  // administrateur sur macOS et Windows ; sinon on garde :4321.
-  const alt = http.createServer(server.listeners('request')[0]);
-  alt.once('error', () => report());
-  alt.listen(80, '0.0.0.0', () => {
-    port80 = true;
-    altServer = alt;
-    report();
-  });
+server.on('error', (e) => {
+  if (e.code === 'EADDRINUSE') {
+    console.error(`Le port ${PORT} est déjà utilisé (une autre copie de Super CDesign tourne peut-être déjà). Pour en choisir un autre : PORT=5858 npm start`);
+    process.exit(1);
+  }
+  throw e;
 });
-function report() {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Super CDesign : ${homeUrl()}`);
   console.log(`Dossier surveillé : ${WATCH_DIR}`);
-}
+});

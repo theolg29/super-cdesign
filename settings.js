@@ -1,7 +1,7 @@
 // Super CDesign — page de réglages (ouverte par un clic sur l'icône de l'extension).
 // Elle parle directement au serveur local (l'extension a accès à localhost).
 
-const SERVER = 'http://localhost:4321';
+const SERVER = 'http://localhost:5757';
 const $ = (id) => document.getElementById(id);
 let state = null;
 let busy = false;

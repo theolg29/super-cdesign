@@ -1,3 +1,5 @@
 .DS_Store
 *.zip
+/super-cdesign-exports/
 node_modules/
+server/.cache/

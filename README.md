@@ -47,7 +47,7 @@ npm install
 npm start
 ```
 
-Le terminal affiche l'adresse du serveur (par ex. `http://192.168.1.20:4321/`) et le dossier surveillé, `~/SuperDesign` par défaut. Laisse le terminal ouvert.
+Le terminal affiche l'adresse du serveur (par ex. `http://192.168.1.20:4321/`) et le dossier surveillé : `super-cdesign-exports/`, à la racine du projet (créé au premier lancement). Laisse le terminal ouvert.
 
 - Pour surveiller un autre dossier : `SUPERDESIGN_DIR=/chemin/vers/dossier npm start`.
 - Pour changer de port : `PORT=5000 npm start` (le bouton de l'extension attend le port 4321).
@@ -58,9 +58,9 @@ Le serveur tourne sur macOS et Linux (il utilise la commande `unzip`).
 ## Utilisation de la preview mobile
 
 1. Dans Claude Design, sur la frame voulue : **⬇ Export this artboard → HTML (.zip)**, puis enregistre le fichier.
-2. Dépose le zip dans `~/SuperDesign` :
+2. Dépose le zip dans le dossier `super-cdesign-exports/` du projet :
    - un zip à la racine = un projet d'une page ;
-   - **un sous-dossier = un projet de plusieurs pages** (par ex. `~/SuperDesign/MonSite/` avec l'export de l'accueil, de la boutique, du paiement…). Les pages y sont réunies : les liens entre elles fonctionnent.
+   - **un sous-dossier = un projet de plusieurs pages** (par ex. `super-cdesign-exports/MonSite/` avec l'export de l'accueil, de la boutique, du paiement…). Les pages y sont réunies : les liens entre elles fonctionnent.
 3. Clique sur le **bouton téléphone** dans l'en-tête du panneau d'artéfact et scanne le QR code. Le téléphone doit être sur **le même Wi-Fi** que l'ordinateur.
 4. Pour mettre à jour : réexporte la frame et remplace le zip dans le dossier. La page ouverte sur le téléphone se recharge seule.
 
@@ -72,6 +72,8 @@ Un lien vers une page pas encore exportée affiche un écran d'explication, qui 
 - `background.js` récupère le QR code auprès du serveur local : seul le service worker de l'extension peut joindre `localhost` depuis claude.ai.
 - `server/server.mjs` surveille le dossier, décompresse les exports, ajoute la balise `viewport` qui manque aux exports (sinon le téléphone affiche la version ordinateur rétrécie), et injecte un petit script de rechargement automatique.
 
+Le dossier `super-cdesign-exports/` et le cache du serveur (`server/.cache/`) sont exclus de git : tes designs ne partent jamais dans le dépôt.
+
 Les détails techniques, et les pièges de l'interface de Claude, sont dans [`CLAUDE.md`](CLAUDE.md).
 
 ## Limites
@@ -80,3 +82,7 @@ Les détails techniques, et les pièges de l'interface de Claude, sont dans [`CL
 - Dépend de l'interface actuelle de Claude : si Anthropic la modifie, les boutons ou « Play new tab » peuvent disparaître jusqu'à une mise à jour.
 - La preview mobile ne fonctionne que sur le réseau local, et seulement pendant que le serveur tourne.
 - Les exports sont des copies : après une modification du design, il faut réexporter.
+
+## Licence
+
+[MIT](LICENSE).

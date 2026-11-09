@@ -1,13 +1,14 @@
 // Super CDesign — serveur local de preview mobile.
 //
-// Surveille un dossier (par défaut ~/SuperDesign) où l'on dépose les exports
+// Surveille un dossier (par défaut super-cdesign-exports/, à la racine du
+// projet) où l'on dépose les exports
 // HTML de Claude Design (« Export this artboard » → HTML (.zip)), et les sert
 // sur le Wi-Fi pour les ouvrir sur un vrai téléphone.
 //
-//   ~/SuperDesign/Accueil · Desktop-html.zip   → un projet d'une page
-//   ~/SuperDesign/page.html                    → un projet d'une page
-//   ~/SuperDesign/MonSite/*.zip   , *.html…      → un projet de plusieurs pages,
-//                                                 réunies : les liens entre elles marchent
+//   super-cdesign-exports/Accueil · Desktop-html.zip  → un projet d'une page
+//   super-cdesign-exports/page.html                   → un projet d'une page
+//   super-cdesign-exports/MonSite/*.zip, *.html…      → un projet de plusieurs pages,
+//                                                        réunies : les liens entre elles marchent
 //
 //   GET /                     accueil (téléphone) : projets et pages
 //   GET /p/<projet>/<page>    le site (viewport mobile + rechargement auto injectés)
@@ -22,12 +23,17 @@ import fs from 'node:fs/promises';
 import { watch } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 
 const run = promisify(execFile);
 const PORT = Number(process.env.PORT) || 4321;
-const WATCH_DIR = path.resolve(process.env.SUPERDESIGN_DIR || path.join(os.homedir(), 'SuperDesign'));
-const CACHE = path.join(os.homedir(), '.superdesign', 'sites');
+const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
+const PROJECT_DIR = path.resolve(SERVER_DIR, '..');
+// Dossier des exports, à la racine du projet (exclu de git : il contient des designs clients).
+const WATCH_DIR = path.resolve(process.env.SUPERDESIGN_DIR || path.join(PROJECT_DIR, 'super-cdesign-exports'));
+// Sites décompressés, reconstruits à chaque changement (exclu de git).
+const CACHE = path.join(SERVER_DIR, '.cache');
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',

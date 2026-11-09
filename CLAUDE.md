@@ -6,7 +6,7 @@ Fonctions :
 - **Bouton « Présenter »** dans l'en-tête du panneau d'artéfact d'un chat (avant « Développer ») : ouvre l'artéfact publié dans un nouvel onglet avec `?superdesign=present`.
 - **« Play new tab »** ajouté au menu PLAY de chaque frame du canvas (après « Play on canvas » / « Play full screen ») : ouvre l'onglet de présentation directement sur cette frame.
 - **Onglet de présentation** (`claude.ai/artifact/<id>?superdesign=present`) : masque la barre Claude et rogne la barre du viewer.
-- **Preview mobile** : bouton (icône téléphone) dans l'en-tête du panneau d'artéfact, qui affiche le QR code du serveur local (`server/`). Ce serveur sert sur le Wi-Fi les exports HTML déposés à la main dans `~/SuperDesign`.
+- **Preview mobile** : bouton (icône téléphone) dans l'en-tête du panneau d'artéfact, qui affiche le QR code du serveur local (`server/`). Ce serveur sert sur le Wi-Fi les exports HTML déposés à la main dans `super-cdesign-exports/` (racine du projet).
 
 L'essentiel est dans `content.js` (un seul fichier, deux rôles selon l'origine). `background.js` ne sert qu'à récupérer le QR code auprès du serveur local.
 
@@ -16,7 +16,7 @@ L'essentiel est dans `content.js` (un seul fichier, deux rôles selon l'origine)
 - `content.js` : `runOnClaude()` (pages claude.ai) ou `runInViewerFrame()` (iframe du viewer).
 - `claude.css` : masque `#hdr`, `#top-edge`, `#hdr-degraded` et remonte `body > main` quand `html[data-superdesign="on"]`.
 - `background.js` : répond au message `superdesign-qr` en interrogeant `http://localhost:4321/api/qr` (`{ url, svg, dir }`).
-- `server/server.mjs` : serveur Node (dépendance unique : `qrcode`), lancé avec `cd server && npm start`. Port 4321, écoute sur `0.0.0.0`. Surveille `~/SuperDesign` (variable `SUPERDESIGN_DIR` pour en changer) ; sites construits dans `~/.superdesign/sites/<projet>/`.
+- `server/server.mjs` : serveur Node (dépendance unique : `qrcode`), lancé avec `cd server && npm start`. Port 4321, écoute sur `0.0.0.0`. Surveille `super-cdesign-exports/` à la racine du projet (variable `SUPERDESIGN_DIR` pour en changer) ; sites construits dans `server/.cache/<projet>/`. Les deux sont exclus de git (designs clients, dépôt public).
 - `icons/` : générées avec Pillow (pas de source SVG dans le dépôt).
 
 Après chaque modification, incrémente `version` dans `manifest.json`.
@@ -39,7 +39,7 @@ Messages marqués `{ __superdesign: 1, type }`. L'origine et la source sont touj
 - **Lancement d'une frame** (`superdesign_play=<titre de la frame>`) : le viewer clique sur le bouton PLAY dont le titre correspond. Dès que l'URL du parent passe à `#play-<id>`, le parent recharge sur `?superdesign=present#play-<id>`, sans `superdesign_play`. Le viewer ouvre ce lien direct nativement en plein écran. Le lancement simulé seul laissait des affichages incorrects (frame figée à moitié taille). L'iframe reste à `opacity:0` pendant le lancement, avec un filet de sécurité de 10 s.
 
 ### Preview mobile (serveur local)
-- **Principe** : aucune automatisation côté Claude. L'utilisateur exporte lui-même (⬇ « Export this artboard » → HTML (.zip)) et dépose le zip dans `~/SuperDesign`. Le serveur surveille le dossier (`fs.watch` récursif + passage toutes les 5 s), reconstruit le projet modifié, et le téléphone se recharge seul (script injecté qui interroge `/api/version/<projet>` toutes les 1,5 s).
+- **Principe** : aucune automatisation côté Claude. L'utilisateur exporte lui-même (⬇ « Export this artboard » → HTML (.zip)) et dépose le zip dans `super-cdesign-exports/`. Le serveur surveille le dossier (`fs.watch` récursif + passage toutes les 5 s), reconstruit le projet modifié, et le téléphone se recharge seul (script injecté qui interroge `/api/version/<projet>` toutes les 1,5 s).
 - **Projets** : un zip ou un `.html` à la racine = un projet. Un sous-dossier = un projet de plusieurs pages : ses zips sont décompressés dans un même site (du plus ancien au plus récent), et les liens entre pages (`href="Shop.dc.html"`) marchent. Lien vers une page absente → écran d'explication.
 - **Contenu d'un export** : la page de la frame (`Main.dc.html`, `Checkout.dc.html`…), les composants qu'elle importe (`<dc-import name="Nav">` → `Nav.dc.html`), `support.js`, `vendor/react*.js`, `assets/` (noms par empreinte) et un `README.md` (« # Accueil · Desktop — design reference », « open `Main.dc.html` »). Pages = HTML qu'aucun autre n'importe par `dc-import` ; titres tirés du README.
 - **Viewport** : l'export n'a pas de `<meta name="viewport">` ; le serveur l'ajoute, sinon le téléphone affiche la version bureau rétrécie.

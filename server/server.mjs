@@ -131,6 +131,18 @@ async function listHtml(dir) {
   return out;
 }
 
+// Décompresse un zip : `unzip` (macOS, Linux), sinon `tar` (Windows 10+, bsdtar).
+// Les deux ignorent les chemins en « ../ » d'un zip malveillant.
+async function extractZip(file, dest) {
+  await fs.mkdir(dest, { recursive: true });
+  try {
+    await run('unzip', ['-q', '-o', file, '-d', dest]);
+  } catch (e) {
+    if (e.code !== 'ENOENT') throw e;
+    await run('tar', ['-xf', file, '-C', dest]);
+  }
+}
+
 // Construit le site d'un projet dans le cache : zips décompressés (du plus
 // ancien au plus récent) puis fichiers libres copiés par-dessus.
 async function buildProject(src) {
@@ -154,8 +166,7 @@ async function buildProject(src) {
   for (const z of zips) {
     const part = tmp + '.part';
     await fs.rm(part, { recursive: true, force: true });
-    // (unzip ignore d'office les chemins en « ../ » d'un zip malveillant.)
-    await run('unzip', ['-q', '-o', z.path, '-d', part]);
+    await extractZip(z.path, part);
     const info = await readmeInfo(part);
     if (info.entry) titles[info.entry] = info.title || cleanTitle(z.name);
     await fs.rm(path.join(part, 'README.md'), { force: true });

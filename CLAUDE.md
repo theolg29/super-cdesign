@@ -18,6 +18,7 @@ L'essentiel est dans `content.js` (un seul fichier, deux rôles selon l'origine)
 - `background.js` : répond au message `superdesign-qr` en interrogeant `http://localhost:4321/api/qr` (`{ url, svg, dir }`).
 - `server/server.mjs` : serveur Node (dépendance unique : `qrcode`), lancé avec `cd server && npm start`. Port 4321, écoute sur `0.0.0.0`. Surveille `super-cdesign-exports/` à la racine du projet (variable `SUPERDESIGN_DIR` pour en changer) ; sites construits dans `server/.cache/<projet>/`. Les deux sont exclus de git (designs clients, dépôt public).
 - `icons/` : générées avec Pillow (pas de source SVG dans le dépôt).
+- `README.md` (public, en français), `INSTALL.md` (guide d'installation écrit pour les assistants IA : demander d'abord le dossier d'installation), `docs/install-*.svg` (boutons « Installer avec Claude / ChatGPT » du README, qui ouvrent claude.ai/new?q= et chatgpt.com/?q= avec la demande préremplie). Garder le texte de la demande identique dans les deux liens et dans le bloc à copier du README.
 
 Après chaque modification, incrémente `version` dans `manifest.json`.
 

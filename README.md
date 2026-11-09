@@ -6,6 +6,24 @@
 
 > Projet personnel, non officiel, sans lien avec Anthropic. Il s'appuie sur l'interface actuelle de claude.ai et peut cesser de fonctionner si elle change.
 
+## 🚀 Installation rapide
+
+Laisse une IA l'installer pour toi :
+
+<p align="center">
+  <a href="https://claude.ai/new?q=Installe%20Super%20CDesign%20%28Super%20Claude%20Design%2C%20une%20extension%20Chrome%20pour%20claude.ai%29%20pour%20moi.%20Suis%20le%20guide%20%C3%A9crit%20pour%20les%20assistants%20IA%20%3A%20https%3A%2F%2Fraw.githubusercontent.com%2Ftheolg29%2Fsuper-cdesign%2Fmain%2FINSTALL.md%20%E2%80%94%20commence%20par%20me%20demander%20o%C3%B9%20l%27installer."><img src="docs/install-claude.svg" alt="Installer avec Claude" width="300"></a>
+  &nbsp;
+  <a href="https://chatgpt.com/?q=Installe%20Super%20CDesign%20%28Super%20Claude%20Design%2C%20une%20extension%20Chrome%20pour%20claude.ai%29%20pour%20moi.%20Suis%20le%20guide%20%C3%A9crit%20pour%20les%20assistants%20IA%20%3A%20https%3A%2F%2Fraw.githubusercontent.com%2Ftheolg29%2Fsuper-cdesign%2Fmain%2FINSTALL.md%20%E2%80%94%20commence%20par%20me%20demander%20o%C3%B9%20l%27installer."><img src="docs/install-chatgpt.svg" alt="Installer avec ChatGPT" width="300"></a>
+</p>
+
+Ou colle ceci dans Claude Code, Codex ou Cursor, qui exécutent les commandes à ta place :
+
+```text
+Installe Super CDesign (Super Claude Design, une extension Chrome pour claude.ai) pour moi. Suis le guide écrit pour les assistants IA : https://raw.githubusercontent.com/theolg29/super-cdesign/main/INSTALL.md — commence par me demander où l'installer.
+```
+
+L'assistant te demande d'abord où installer le projet, puis suit [`INSTALL.md`](INSTALL.md). Dans Claude ou ChatGPT sur le navigateur, il te guide étape par étape et c'est toi qui lances les commandes. Le chargement de l'extension dans Chrome se fait toujours à la main (`chrome://extensions`).
+
 ## Pourquoi
 
 Depuis que Claude Design s'affiche dans les artéfacts, présenter un site à un client montre aussi les barres de Claude (en-tête, barre du viewer, « Fill / Fit »…). Et les simulateurs de téléphone ne remplacent pas un test sur un vrai téléphone.
@@ -27,7 +45,7 @@ Le bouton et l'option n'apparaissent que pour un artéfact **publié** (il faut 
 
 Rien n'est automatisé dans Claude : c'est toi qui exportes, avec le bouton natif. Le serveur ne fait que lire un dossier sur ton ordinateur, et rien ne sort de ton réseau local.
 
-## Installation
+## Installation manuelle
 
 ### 1. L'extension
 
@@ -53,7 +71,7 @@ Le terminal affiche l'adresse du serveur (par ex. `http://192.168.1.20:4321/`) e
 - Pour changer de port : `PORT=5000 npm start` (le bouton de l'extension attend le port 4321).
 - Au premier lancement, macOS peut demander d'autoriser les connexions entrantes pour `node` : accepte, c'est ce qui permet au téléphone de joindre l'ordinateur.
 
-Le serveur tourne sur macOS et Linux (il utilise la commande `unzip`).
+Le serveur tourne sur macOS, Linux et Windows 10+ (il utilise `unzip`, ou `tar` sur Windows).
 
 ## Utilisation de la preview mobile
 

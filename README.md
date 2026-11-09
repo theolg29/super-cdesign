@@ -1,5 +1,7 @@
 # Super CDesign
 
+<p align="center"><img src="docs/hero.png" alt="Super CDesign : un design Claude présenté sans l'interface de Claude, sur ordinateur et sur téléphone" width="100%"></p>
+
 **Super Claude Design** : une extension Chrome pour présenter un design fait avec Claude sans l'interface de Claude, et le tester sur un vrai téléphone en scannant un QR code.
 
 > ⚠️ **Fonctionne uniquement avec la version web de Claude** ([claude.ai](https://claude.ai) dans Chrome). L'application de bureau Claude (Mac / Windows) et les applications mobiles ne chargent pas les extensions Chrome.
@@ -11,9 +13,9 @@
 Laisse une IA l'installer pour toi :
 
 <p align="center">
-  <a href="https://claude.ai/new?q=Installe%20Super%20CDesign%20%28Super%20Claude%20Design%2C%20une%20extension%20Chrome%20pour%20claude.ai%29%20pour%20moi.%20Suis%20le%20guide%20%C3%A9crit%20pour%20les%20assistants%20IA%20%3A%20https%3A%2F%2Fraw.githubusercontent.com%2Ftheolg29%2Fsuper-cdesign%2Fmain%2FINSTALL.md%20%E2%80%94%20commence%20par%20me%20demander%20o%C3%B9%20l%27installer."><img src="docs/install-claude.svg" alt="Installer avec Claude" width="300"></a>
+  <a href="https://claude.ai/new?q=Installe%20Super%20CDesign%20%28Super%20Claude%20Design%2C%20une%20extension%20Chrome%20pour%20claude.ai%29%20pour%20moi.%20Suis%20le%20guide%20%C3%A9crit%20pour%20les%20assistants%20IA%20%3A%20https%3A%2F%2Fraw.githubusercontent.com%2Ftheolg29%2Fsuper-cdesign%2Fmain%2FINSTALL.md%20%E2%80%94%20commence%20par%20me%20demander%20o%C3%B9%20l%27installer."><img src="docs/install-claude.svg" alt="Installer avec Claude" height="40"></a>
   &nbsp;
-  <a href="https://chatgpt.com/?q=Installe%20Super%20CDesign%20%28Super%20Claude%20Design%2C%20une%20extension%20Chrome%20pour%20claude.ai%29%20pour%20moi.%20Suis%20le%20guide%20%C3%A9crit%20pour%20les%20assistants%20IA%20%3A%20https%3A%2F%2Fraw.githubusercontent.com%2Ftheolg29%2Fsuper-cdesign%2Fmain%2FINSTALL.md%20%E2%80%94%20commence%20par%20me%20demander%20o%C3%B9%20l%27installer."><img src="docs/install-chatgpt.svg" alt="Installer avec ChatGPT" width="300"></a>
+  <a href="https://chatgpt.com/?q=Installe%20Super%20CDesign%20%28Super%20Claude%20Design%2C%20une%20extension%20Chrome%20pour%20claude.ai%29%20pour%20moi.%20Suis%20le%20guide%20%C3%A9crit%20pour%20les%20assistants%20IA%20%3A%20https%3A%2F%2Fraw.githubusercontent.com%2Ftheolg29%2Fsuper-cdesign%2Fmain%2FINSTALL.md%20%E2%80%94%20commence%20par%20me%20demander%20o%C3%B9%20l%27installer."><img src="docs/install-chatgpt.svg" alt="Installer avec ChatGPT" height="40"></a>
 </p>
 
 Ou colle ceci dans Claude Code, Codex ou Cursor, qui exécutent les commandes à ta place :
@@ -30,6 +32,8 @@ Depuis que Claude Design s'affiche dans les artéfacts, présenter un site à un
 
 ## Fonctionnalités
 
+<p align="center"><img src="docs/dans-claude.png" alt="Dans Claude : option Play new tab dans le menu PLAY, boutons Présenter et Preview mobile, fenêtre du QR code" width="100%"></p>
+
 ### Présenter sans l'interface Claude
 - **Bouton « Présenter »** dans l'en-tête du panneau d'artéfact (à côté de Partager / Développer) : ouvre l'artéfact publié dans un nouvel onglet, en plein écran, **sans aucune barre de Claude**.
 - **« Play new tab »** dans le menu **PLAY** de chaque frame du canvas (à côté de « Play on canvas » et « Play full screen ») : ouvre directement cette frame en plein écran dans un nouvel onglet, sans interface.
@@ -37,8 +41,11 @@ Depuis que Claude Design s'affiche dans les artéfacts, présenter un site à un
 Le bouton et l'option n'apparaissent que pour un artéfact **publié** (il faut un lien `claude.ai/artifact/…`).
 
 ### Preview mobile sur un vrai téléphone
+
+<p align="center"><img src="docs/preview-mobile.png" alt="Preview mobile : les étapes et l'accueil sur le téléphone avec un aperçu de chaque page" width="100%"></p>
+
 - Un **petit serveur local** sert sur ton Wi-Fi les exports HTML de tes designs.
-- Le **bouton téléphone** dans l'en-tête du panneau d'artéfact affiche son **QR code** : scanne-le avec l'appareil photo du téléphone.
+- Le **bouton téléphone** dans l'en-tête du panneau d'artéfact affiche son **QR code** : scanne-le avec l'appareil photo du téléphone. L'adresse est simplement **`http://cdesign.local/`**.
 - Sur le téléphone, l'accueil montre **tes projets avec un aperçu de chaque page** ; touche une page pour l'ouvrir en plein écran.
 - **Les liens entre pages fonctionnent** quand les pages sont dans le même projet.
 - Quand tu remplaces un export, **le téléphone se recharge tout seul**.
@@ -65,9 +72,12 @@ npm install
 npm start
 ```
 
-Le terminal affiche l'adresse du serveur (par ex. `http://192.168.1.20:4321/`) et le dossier surveillé : `super-cdesign-exports/`, à la racine du projet (créé au premier lancement). Laisse le terminal ouvert.
+Le terminal affiche l'adresse du serveur, **`http://cdesign.local/`** (et l'adresse IP en secours), et le dossier surveillé : `super-cdesign-exports/`, à la racine du projet (créé au premier lancement). Laisse le terminal ouvert.
 
 - Pour surveiller un autre dossier : `SUPERDESIGN_DIR=/chemin/vers/dossier npm start`.
+- Le serveur s'annonce sur le Wi-Fi sous le nom `cdesign.local` (Bonjour / mDNS). Pour un autre nom : `SUPERDESIGN_HOST=monnom npm start` → `monnom.local`.
+- Il écoute sur le port 4321 et, quand c'est possible (macOS, Windows), aussi sur le port 80 : d'où l'adresse sans `:4321`. Sous Linux, ce sera `http://cdesign.local:4321/`.
+- iPhone, Mac, Windows et Linux reconnaissent les adresses en `.local`. Certains Android non : utilise alors l'adresse IP affichée en secours (dans le terminal et sous le QR code).
 - Pour changer de port : `PORT=5000 npm start` (le bouton de l'extension attend le port 4321).
 - Au premier lancement, macOS peut demander d'autoriser les connexions entrantes pour `node` : accepte, c'est ce qui permet au téléphone de joindre l'ordinateur.
 

@@ -8,8 +8,8 @@ async function qr() {
   try {
     const res = await fetch(`${SERVER}/api/qr`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const { url, svg, dir } = await res.json();
-    return { ok: true, url, svg, dir };
+    const { url, ipUrl, svg, dir } = await res.json();
+    return { ok: true, url, ipUrl, svg, dir };
   } catch (e) {
     return { ok: false, error: e.message || String(e) };
   }

@@ -25,6 +25,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
+import makeMdns from 'multicast-dns';
 
 const run = promisify(execFile);
 const PORT = Number(process.env.PORT) || 4321;
@@ -77,7 +78,46 @@ function lanAddress() {
     candidates[0];
   return pref ? pref.address : '127.0.0.1';
 }
-const homeUrl = () => `http://${lanAddress()}:${PORT}/`;
+// Nom annoncé sur le réseau local (Bonjour / mDNS) : http://cdesign.local/
+const HOST = `${(process.env.SUPERDESIGN_HOST || 'cdesign').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'cdesign'}.local`;
+let port80 = false; // vrai si le serveur écoute aussi sur le port 80 (adresse sans « :4321 »)
+const portSuffix = () => (port80 ? '' : `:${PORT}`);
+const homeUrl = () => `http://${HOST}${portSuffix()}/`;
+const ipUrl = () => `http://${lanAddress()}${portSuffix()}/`;
+
+// Répond aux requêtes mDNS pour HOST avec l'adresse IPv4 du Mac. iOS, macOS,
+// Windows et Linux résolvent les noms en .local ; Android pas toujours (d'où
+// l'adresse IP affichée en secours).
+function startMdns() {
+  let mdns;
+  try {
+    mdns = makeMdns();
+  } catch (e) {
+    console.warn(`! mDNS indisponible (${e.message}) : utilise l'adresse IP.`);
+    return;
+  }
+  const answer = () => ({ name: HOST, type: 'A', ttl: 120, flush: true, data: lanAddress() });
+  // Réponse négative (NSEC) : « pas d'adresse IPv6 », sinon le client attend
+  // une réponse AAAA plusieurs secondes avant de se rabattre sur l'IPv4.
+  const noIpv6 = () => ({ name: HOST, type: 'NSEC', ttl: 120, flush: true, data: { nextDomain: HOST, rrtypes: ['A'] } });
+  mdns.on('query', (q) => {
+    const asked = q.questions.filter((x) => x.name.toLowerCase() === HOST);
+    if (!asked.length) return;
+    if (asked.some((x) => x.type === 'A' || x.type === 'ANY')) mdns.respond({ answers: [answer()], additionals: [noIpv6()] });
+    else if (asked.some((x) => x.type === 'AAAA')) mdns.respond({ answers: [noIpv6()], additionals: [answer()] });
+  });
+  mdns.on('error', (e) => console.warn(`! mDNS : ${e.message}`));
+  // Annonce au démarrage, puis à chaque changement de réseau éventuel.
+  mdns.respond({ answers: [answer()] });
+  let last = lanAddress();
+  setInterval(() => {
+    const now = lanAddress();
+    if (now !== last) {
+      last = now;
+      mdns.respond({ answers: [answer()] });
+    }
+  }, 10000);
+}
 
 // --- Projets --------------------------------------------------------------------
 
@@ -413,7 +453,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/qr') {
       const target = homeUrl();
       const svg = await QRCode.toString(target, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#111111', light: '#ffffff' } });
-      return send(res, 200, { url: target, svg, dir: WATCH_DIR, projects: projects.size });
+      return send(res, 200, { url: target, ipUrl: ipUrl(), svg, dir: WATCH_DIR, projects: projects.size });
     }
     if ((m = /^\/api\/version\/([^/]+)$/.exec(p))) {
       const proj = projects.get(m[1]);
@@ -445,6 +485,17 @@ watch(WATCH_DIR, { recursive: true }, scheduleScan);
 setInterval(scan, 5000); // filet de sécurité si un événement du système de fichiers est manqué
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Super CDesign : ${homeUrl()}`);
-  console.log(`Dossier surveillé : ${WATCH_DIR}`);
+  // Port 80 en plus (adresse sans numéro de port) : possible sans droits
+  // administrateur sur macOS et Windows ; sinon on garde :4321.
+  const alt = http.createServer(server.listeners('request')[0]);
+  alt.once('error', () => report());
+  alt.listen(80, '0.0.0.0', () => {
+    port80 = true;
+    report();
+  });
+  startMdns();
 });
+function report() {
+  console.log(`Super CDesign : ${homeUrl()}  (ou ${ipUrl()})`);
+  console.log(`Dossier surveillé : ${WATCH_DIR}`);
+}

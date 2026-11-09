@@ -9,6 +9,7 @@
     "start": "node server.mjs"
   },
   "dependencies": {
+    "multicast-dns": "7.2.5",
     "qrcode": "1.5.4"
   }
 }

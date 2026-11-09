@@ -89,7 +89,11 @@ npm start</code></pre>
 
     <!-- Projets -->
     <section class="card">
-      <h2>Projets <span class="count" id="count"></span></h2>
+      <div class="card-head">
+        <h2>Projets <span class="count" id="count"></span></h2>
+        <button class="btn danger ghost" id="delete-all" type="button">Tout supprimer</button>
+      </div>
+      <p class="muted small" id="trash-note"></p>
       <div id="projects"></div>
     </section>
   </div>

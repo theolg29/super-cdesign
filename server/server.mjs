@@ -215,6 +215,7 @@ async function buildProject(src) {
     : [{ name: src.name, path: src.path, isDir: false }];
 
   const titles = {}; // page → titre (depuis le README de chaque export)
+  const origins = {}; // page → fichier déposé d'où elle vient (pour la supprimer)
   const zips = [];
   for (const f of files) if (!f.isDir && /\.zip$/i.test(f.name)) zips.push({ ...f, mtime: (await fs.stat(f.path)).mtimeMs });
   zips.sort((a, b) => a.mtime - b.mtime);
@@ -223,7 +224,10 @@ async function buildProject(src) {
     await fs.rm(part, { recursive: true, force: true });
     await extractZip(z.path, part);
     const info = await readmeInfo(part);
-    if (info.entry) titles[info.entry] = info.title || cleanTitle(z.name);
+    if (info.entry) {
+      titles[info.entry] = info.title || cleanTitle(z.name);
+      origins[info.entry] = z.path;
+    }
     await fs.rm(path.join(part, 'README.md'), { force: true });
     await fs.cp(part, tmp, { recursive: true, force: true });
     await fs.rm(part, { recursive: true, force: true });
@@ -234,6 +238,7 @@ async function buildProject(src) {
     if (/\.zip$/i.test(f.name)) continue;
     const keep = f.isDir ? /^(assets|vendor|images?|img|css|js|fonts?|media)$/i.test(f.name) : /\.(html?|css|js|svg|png|jpe?g|gif|webp|avif|woff2?|ttf|otf)$/i.test(f.name);
     if (keep) await fs.cp(f.path, path.join(tmp, f.name), { recursive: true, force: true });
+    if (!f.isDir && /\.html?$/i.test(f.name)) origins[f.name] = f.path;
   }
 
   // Pages = la frame de chaque export (nommée par son README), même si une
@@ -253,7 +258,7 @@ async function buildProject(src) {
       const text = await fs.readFile(path.join(tmp, h), 'utf8').catch(() => '');
       t = (/<title>([^<]+)<\/title>/i.exec(text) || [])[1] || h.replace(/\.dc\.html?$|\.html?$/i, '');
     }
-    pages.push({ file: h, title: t.trim() });
+    pages.push({ file: h, title: t.trim(), origin: origins[h] || null });
   }
   pages.sort((a, b) => a.title.localeCompare(b.title, 'fr'));
 
@@ -402,6 +407,27 @@ async function disableAutostart() {
   await fs.rm(AGENT_PLIST, { force: true });
 }
 
+// Suppression : vers la Corbeille sur macOS (récupérable), définitive ailleurs.
+const canTrash = process.platform === 'darwin';
+async function removeToTrash(target) {
+  const real = path.resolve(target);
+  if (!real.startsWith(WATCH_DIR + path.sep)) throw new Error('Fichier hors du dossier des exports');
+  if (!canTrash) return fs.rm(real, { recursive: true, force: true });
+  const trash = path.join(os.homedir(), '.Trash');
+  const ext = path.extname(real);
+  let dest = path.join(trash, path.basename(real));
+  for (let i = 2; await fs.stat(dest).catch(() => null); i++) {
+    dest = path.join(trash, `${path.basename(real, ext)} ${i}${ext}`);
+  }
+  try {
+    await fs.rename(real, dest);
+  } catch (e) {
+    if (e.code !== 'EXDEV') throw e;
+    await fs.cp(real, dest, { recursive: true });
+    await fs.rm(real, { recursive: true, force: true });
+  }
+}
+
 function openFolder(dir) {
   const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'explorer' : 'xdg-open';
   return run(cmd, [dir]).catch(() => {}); // explorer renvoie un code non nul même quand tout va bien
@@ -435,7 +461,20 @@ async function configPayload() {
     autostart: { supported: autostartSupported, enabled: await autostartEnabled() },
     projects: [...projects.values()]
       .sort((a, b) => b.updatedAt - a.updatedAt)
-      .map((p) => ({ title: p.title, updatedAt: p.updatedAt, pages: p.pages.map((pg) => ({ title: pg.title, url: `${homeUrl()}p/${p.slug}/${encodeURI(pg.file)}` })) })),
+      .map((p) => ({
+        slug: p.slug,
+        title: p.title,
+        updatedAt: p.updatedAt,
+        version: p.version,
+        pages: p.pages.map((pg) => ({
+          file: pg.file,
+          title: pg.title,
+          deletable: p.pages.length === 1 || !!pg.origin,
+          url: `${homeUrl()}p/${p.slug}/${encodeURI(pg.file)}`,
+          thumb: `http://localhost:${PORT}/p/${p.slug}/${encodeURI(pg.file)}?thumb=1&v=${p.version}`,
+        })),
+      })),
+    trash: canTrash,
   };
 }
 
@@ -607,7 +646,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Réglages et QR code : uniquement l'extension, sur ce Mac.
-    if (p === '/api/qr' || p === '/api/config' || p === '/api/open-folder' || p === '/api/pick-folder' || p === '/api/autostart') {
+    if (['/api/qr', '/api/config', '/api/open-folder', '/api/pick-folder', '/api/autostart', '/api/delete', '/api/delete-all'].includes(p)) {
       if (!trusted(req)) return send(res, 403, { error: 'Réservé à l’extension, sur cet ordinateur' });
       if (p === '/api/qr' && req.method === 'GET') {
         const c = await configPayload();
@@ -642,6 +681,27 @@ const server = http.createServer(async (req, res) => {
         return send(res, 200, { ok: true });
       }
       if (p === '/api/pick-folder') return send(res, 200, await pickFolder());
+      if (p === '/api/delete') {
+        const proj = projects.get(String(body.project || ''));
+        if (!proj) return send(res, 404, { error: 'Projet introuvable' });
+        let target = proj.source;
+        if (body.file) {
+          const page = proj.pages.find((pg) => pg.file === body.file);
+          if (!page) return send(res, 404, { error: 'Page introuvable' });
+          // Une page seule dans son projet : on supprime tout le projet.
+          target = proj.pages.length === 1 ? proj.source : page.origin;
+          if (!target) return send(res, 400, { error: 'Cette page vient d’un fichier partagé : supprime le projet entier' });
+        }
+        await removeToTrash(target);
+        await scan();
+        return send(res, 200, await configPayload());
+      }
+      if (p === '/api/delete-all') {
+        const entries = await fs.readdir(WATCH_DIR).catch(() => []);
+        for (const name of entries) if (!name.startsWith('.')) await removeToTrash(path.join(WATCH_DIR, name));
+        await scan();
+        return send(res, 200, await configPayload());
+      }
       if (p === '/api/autostart') {
         if (!autostartSupported) return send(res, 400, { error: 'Disponible sur macOS uniquement' });
         if (body.enabled) {

@@ -65,38 +65,90 @@ function render(c) {
   $('autostart-field').hidden = !c.autostart.supported;
   $('autostart').checked = c.autostart.enabled;
 
-  // Projets
+  // Projets (reconstruits seulement s'ils changent, pour ne pas recharger les aperçus)
   $('count').textContent = c.projects.length ? `· ${c.projects.length}` : '';
+  $('delete-all').hidden = !c.projects.length;
+  $('trash-note').textContent = c.projects.length
+    ? (c.trash ? 'Supprimer envoie les fichiers à la Corbeille.' : 'Attention : la suppression est définitive.')
+    : '';
+  const sig = JSON.stringify(c.projects.map((p) => [p.slug, p.version, p.pages.map((pg) => pg.file)]));
+  if (sig !== lastProjectsSig) {
+    lastProjectsSig = sig;
+    renderProjects(c);
+  }
+}
+
+const TRASH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
+const cleanTitle = (t) => t.replace(/\s*·\s*(desktop|mobile|tablette?|tablet)$/i, '');
+let lastProjectsSig = '';
+const thumbObserver = new ResizeObserver((entries) => {
+  for (const e of entries) e.target.style.setProperty('--s', e.contentRect.width / 390);
+});
+
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text) n.textContent = text;
+  return n;
+}
+
+function renderProjects(c) {
   const list = $('projects');
   list.replaceChildren();
   if (!c.projects.length) {
-    const p = document.createElement('p');
-    p.className = 'empty';
-    p.textContent = 'Aucun projet pour l’instant. Dépose un export HTML (.zip) dans le dossier des exports.';
-    list.append(p);
+    list.append(el('p', 'empty', 'Aucun projet pour l’instant. Dépose un export HTML (.zip) dans le dossier des exports.'));
+    return;
   }
+  const where = c.trash ? ' Le fichier part dans la Corbeille.' : ' La suppression est définitive.';
   for (const proj of c.projects) {
-    const item = document.createElement('div');
-    item.className = 'project';
-    const head = document.createElement('div');
-    head.className = 'project-head';
-    const name = document.createElement('strong');
-    name.textContent = proj.title;
-    const meta = document.createElement('span');
-    meta.className = 'muted small';
-    meta.textContent = `${proj.pages.length} page${proj.pages.length > 1 ? 's' : ''} · ${timeFr(proj.updatedAt)}`;
-    head.append(name, meta);
-    const pages = document.createElement('div');
-    pages.className = 'pages';
+    const item = el('div', 'project');
+    const head = el('div', 'project-head');
+    const meta = el('span', 'meta');
+    meta.append(el('span', 'muted small', `${proj.pages.length} page${proj.pages.length > 1 ? 's' : ''} · ${timeFr(proj.updatedAt)}`));
+    const delProj = el('button', 'link-btn', 'Supprimer le projet');
+    delProj.type = 'button';
+    delProj.addEventListener('click', () => {
+      if (!confirm(`Supprimer le projet « ${proj.title} » et toutes ses pages ?${where}`)) return;
+      act(() => api('/api/delete', { project: proj.slug }), `Projet « ${proj.title} » supprimé.`);
+    });
+    meta.append(delProj);
+    head.append(el('strong', '', proj.title), meta);
+
+    const grid = el('div', 'thumbs');
     for (const pg of proj.pages) {
-      const a = document.createElement('a');
+      const tile = el('div', 'tile');
+      const a = el('a');
       a.href = pg.url;
       a.target = '_blank';
       a.rel = 'noopener';
-      a.textContent = pg.title.replace(/\s*·\s*(desktop|mobile|tablette?|tablet)$/i, '');
-      pages.append(a);
+      a.title = `Ouvrir « ${cleanTitle(pg.title)} »`;
+      const frame = el('div', 'frame');
+      const iframe = document.createElement('iframe');
+      iframe.src = pg.thumb;
+      iframe.loading = 'lazy';
+      iframe.tabIndex = -1;
+      iframe.setAttribute('aria-hidden', 'true');
+      iframe.setAttribute('scrolling', 'no');
+      frame.append(iframe);
+      thumbObserver.observe(frame);
+      a.append(frame, el('p', 'tile-title', cleanTitle(pg.title)));
+      tile.append(a);
+      if (pg.deletable) {
+        const del = el('button', 'icon-btn');
+        del.type = 'button';
+        del.innerHTML = TRASH_ICON;
+        del.setAttribute('aria-label', `Supprimer la page « ${cleanTitle(pg.title)} »`);
+        del.title = 'Supprimer cette page';
+        del.addEventListener('click', () => {
+          const last = proj.pages.length === 1 ? ' C’est la seule page : le projet sera supprimé.' : '';
+          if (!confirm(`Supprimer la page « ${cleanTitle(pg.title)} » ?${last}${where}`)) return;
+          act(() => api('/api/delete', { project: proj.slug, file: pg.file }), `Page « ${cleanTitle(pg.title)} » supprimée.`);
+        });
+        tile.append(del);
+      }
+      grid.append(tile);
     }
-    item.append(head, pages);
+    item.append(head, grid);
     list.append(item);
   }
 }
@@ -166,6 +218,13 @@ $('dir-form').addEventListener('submit', (e) => {
   act(() => api('/api/config', { dir: $('dir-input').value }), 'Dossier mis à jour.').then(() => {
     if ($('msg').dataset.kind === 'ok') $('dir-form').hidden = true;
   });
+});
+
+$('delete-all').addEventListener('click', () => {
+  const n = state.projects.length;
+  const where = state.trash ? 'Les fichiers partent dans la Corbeille.' : 'La suppression est définitive.';
+  if (!confirm(`Supprimer les ${n} projet${n > 1 ? 's' : ''} du dossier des exports ? ${where}`)) return;
+  act(() => api('/api/delete-all', {}), 'Dossier des exports vidé.');
 });
 
 $('reset-folder').addEventListener('click', () => act(() => api('/api/config', { dir: '' }), 'Retour au dossier par défaut.'));

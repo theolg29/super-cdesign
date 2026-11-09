@@ -278,6 +278,16 @@
       return n;
     }
 
+    function settingsLink() {
+      const b = el('button', 'superdesign-pop__link', 'Réglages (dossier, adresse, démarrage auto) →');
+      b.type = 'button';
+      b.addEventListener('click', () => {
+        chrome.runtime.sendMessage({ type: 'superdesign-settings' });
+        closeMobilePopover();
+      });
+      return b;
+    }
+
     function toggleMobilePopover(btn) {
       if (popover) return closeMobilePopover();
       popover = el('div', 'superdesign-pop');
@@ -300,7 +310,8 @@
           pop.append(
             el('p', 'superdesign-pop__title', 'Le serveur ne répond pas'),
             el('p', 'superdesign-pop__msg', 'Lance-le dans un terminal :'),
-            el('code', 'superdesign-pop__code', 'cd server && npm start')
+            el('code', 'superdesign-pop__code', 'cd server && npm start'),
+            settingsLink()
           );
           return;
         }
@@ -315,17 +326,13 @@
         link.href = res.url;
         link.target = '_blank';
         link.rel = 'noopener';
-        const short = (u) => u.replace(/^http:\/\//, '').replace(/\/$/, '');
-        const fallback = res.ipUrl && res.ipUrl !== res.url
-          ? el('p', 'superdesign-pop__msg', `Si l'adresse ne s'ouvre pas (certains Android) : ${short(res.ipUrl)}`)
-          : null;
         pop.append(
           qr,
           link,
-          el('p', 'superdesign-pop__msg', 'Scanne avec le téléphone (même Wi-Fi), puis choisis la page à ouvrir.'),
-          ...(fallback ? [fallback] : []),
+          el('p', 'superdesign-pop__msg', 'Scanne avec n’importe quel téléphone connecté au même Wi-Fi, puis choisis la page à ouvrir.'),
           el('p', 'superdesign-pop__msg', 'Pour ajouter un projet : ⬇ « Export this artboard » → HTML (.zip), puis dépose le zip dans'),
-          el('code', 'superdesign-pop__code', res.dir.replace(/^\/Users\/[^/]+/, '~'))
+          el('code', 'superdesign-pop__code', res.dir.replace(/^\/Users\/[^/]+/, '~')),
+          settingsLink()
         );
       });
     }

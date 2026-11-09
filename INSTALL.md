@@ -91,7 +91,13 @@ Explique ensuite à l'utilisateur comment s'en servir :
 3. Dans claude.ai, cliquer sur le **bouton téléphone** dans l'en-tête du panneau d'artéfact, puis scanner le QR code avec le téléphone, connecté au **même Wi-Fi**.
 4. Pour mettre à jour : réexporter et remplacer le zip. Le téléphone se recharge tout seul.
 
-Pour les prochaines fois, l'utilisateur relance le serveur avec `cd "<DOSSIER>/server" && npm start`.
+**Démarrage automatique (macOS, recommandé)** : propose-le à l'utilisateur, pour qu'il n'ait plus jamais à lancer le serveur. Deux façons :
+- il clique sur l'icône de l'extension Super CDesign dans Chrome, puis active « Démarrer avec le Mac » ;
+- ou, si tu exécutes les commandes, avec son accord : `curl -s -X POST -d '{"enabled":true}' http://localhost:4321/api/autostart`. Le serveur passe alors la main à launchd (agent `com.supercdesign.server`) et redémarre tout seul en quelques secondes.
+
+Sans démarrage automatique (Windows, Linux, ou si l'utilisateur refuse), il relance le serveur avec `cd "<DOSSIER>/server" && npm start`.
+
+La page de réglages (clic sur l'icône de l'extension) permet aussi d'ouvrir le dossier des exports, d'en choisir un autre et de changer le nom de l'adresse.
 
 ## Étape 7 — Résumé final
 
@@ -112,5 +118,5 @@ Puis dans `chrome://extensions`, cliquer sur ↻ sur Super CDesign, et relancer 
 ## Désinstaller
 
 1. Dans `chrome://extensions`, cliquer sur **Supprimer** sur Super CDesign.
-2. Arrêter le serveur (Ctrl+C dans son terminal).
+2. Arrêter le serveur : Ctrl+C dans son terminal ; s'il démarre avec le Mac, `launchctl bootout gui/$(id -u)/com.supercdesign.server` puis supprimer `~/Library/LaunchAgents/com.supercdesign.server.plist`.
 3. Supprimer `<DOSSIER>`, **après avoir demandé à l'utilisateur** s'il veut garder ses exports (`<DOSSIER>/super-cdesign-exports/`).

@@ -15,7 +15,16 @@ async function qr() {
   }
 }
 
+// Page de réglages : openOptionsPage réutilise l'onglet s'il est déjà ouvert.
+const openSettings = () => chrome.runtime.openOptionsPage();
+
+chrome.action.onClicked.addListener(openSettings);
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg && msg.type === 'superdesign-settings') {
+    openSettings();
+    return;
+  }
   if (!msg || msg.type !== 'superdesign-qr') return;
   qr().then(sendResponse);
   return true; // réponse asynchrone

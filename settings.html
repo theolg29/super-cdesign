@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Super CDesign</title>
+<link rel="icon" href="icons/icon32.png">
+<link rel="stylesheet" href="settings.css">
+</head>
+<body>
+<main>
+  <header class="top">
+    <img src="icons/icon48.png" alt="" width="40" height="40">
+    <div>
+      <h1>Super CDesign</h1>
+      <p class="muted">Preview mobile de tes designs Claude, sur tout ton réseau Wi-Fi</p>
+    </div>
+    <span class="status" id="status" data-state="loading"><i></i><span>Connexion…</span></span>
+  </header>
+
+  <!-- Serveur arrêté -->
+  <section class="card" id="offline" hidden>
+    <h2>Le serveur ne tourne pas</h2>
+    <p class="muted">C’est lui qui sert tes exports aux téléphones. Lance-le une fois dans un terminal, depuis le dossier de l’extension :</p>
+    <pre><code>cd server
+npm install   # la première fois seulement
+npm start</code></pre>
+    <p class="muted">Ensuite, active « Démarrer avec le Mac » ci-dessous : tu n’auras plus jamais à le relancer. Cette page se met à jour toute seule.</p>
+  </section>
+
+  <div id="online" hidden>
+    <!-- Adresse et QR code -->
+    <section class="card grid-qr">
+      <div class="qr" id="qr" role="img" aria-label="QR code de l’accueil"></div>
+      <div>
+        <h2>Ouvrir sur un téléphone</h2>
+        <p class="muted">Scanne le QR code avec n’importe quel téléphone connecté au même Wi-Fi. Il marche partout, Android compris.</p>
+        <p class="label">Adresse à taper</p>
+        <p class="url"><a id="url" href="#" target="_blank" rel="noopener"></a></p>
+        <p class="muted small" id="ip"></p>
+        <div class="row">
+          <button class="btn" id="copy" type="button">Copier l’adresse</button>
+          <a class="btn ghost" id="open-home" href="#" target="_blank" rel="noopener">Ouvrir l’accueil</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Réglages -->
+    <section class="card">
+      <h2>Réglages</h2>
+
+      <form class="field" id="host-form">
+        <label for="host">Nom de l’adresse</label>
+        <div class="inline">
+          <span class="affix">http://</span>
+          <input id="host" name="host" autocomplete="off" spellcheck="false" maxlength="40" pattern="[a-zA-Z0-9-]+" required>
+          <span class="affix">.local</span>
+          <button class="btn" type="submit">Enregistrer</button>
+        </div>
+        <p class="hint" id="host-hint">Lettres, chiffres et tirets. Après un changement, rescanne le QR code.</p>
+      </form>
+
+      <div class="field">
+        <label>Dossier des exports</label>
+        <p class="path" id="dir"></p>
+        <div class="row">
+          <button class="btn" id="open-folder" type="button">Ouvrir le dossier</button>
+          <button class="btn ghost" id="pick-folder" type="button">Choisir un autre dossier…</button>
+          <button class="btn ghost" id="reset-folder" type="button">Dossier par défaut</button>
+        </div>
+        <form class="inline" id="dir-form" hidden>
+          <input id="dir-input" autocomplete="off" spellcheck="false" placeholder="/chemin/complet/vers/le/dossier">
+          <button class="btn" type="submit">Utiliser ce dossier</button>
+        </form>
+        <p class="hint">Dans Claude Design : ⬇ « Export this artboard » → <strong>HTML (.zip)</strong>, puis dépose le zip ici. Un sous-dossier par site : les liens entre ses pages fonctionnent.</p>
+      </div>
+
+      <div class="field" id="autostart-field">
+        <label class="switch">
+          <input type="checkbox" id="autostart">
+          <span class="track" aria-hidden="true"><span class="thumb"></span></span>
+          <span>Démarrer avec le Mac</span>
+        </label>
+        <p class="hint" id="autostart-hint">Le serveur se lance tout seul à chaque ouverture de session, et redémarre s’il s’arrête.</p>
+      </div>
+
+      <p class="msg" id="msg" role="status" aria-live="polite"></p>
+    </section>
+
+    <!-- Projets -->
+    <section class="card">
+      <h2>Projets <span class="count" id="count"></span></h2>
+      <div id="projects"></div>
+    </section>
+  </div>
+
+  <footer class="muted small">
+    Fonctionne avec la version web de Claude (claude.ai dans Chrome) ·
+    <a href="https://github.com/theolg29/super-cdesign" target="_blank" rel="noopener">GitHub</a> ·
+    v<span id="version"></span>
+  </footer>
+</main>
+<script src="settings.js"></script>
+</body>
+</html>

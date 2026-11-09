@@ -3,3 +3,4 @@
 /super-cdesign-exports/
 node_modules/
 server/.cache/
+server/config.json

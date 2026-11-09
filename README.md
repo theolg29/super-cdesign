@@ -45,7 +45,8 @@ Le bouton et l'option n'apparaissent que pour un artéfact **publié** (il faut 
 <p align="center"><img src="docs/preview-mobile.png" alt="Preview mobile : les étapes et l'accueil sur le téléphone avec un aperçu de chaque page" width="100%"></p>
 
 - Un **petit serveur local** sert sur ton Wi-Fi les exports HTML de tes designs.
-- Le **bouton téléphone** dans l'en-tête du panneau d'artéfact affiche son **QR code** : scanne-le avec l'appareil photo du téléphone. L'adresse est simplement **`http://cdesign.local/`**.
+- Le **bouton téléphone** dans l'en-tête du panneau d'artéfact affiche son **QR code** : n'importe quel téléphone du Wi-Fi le scanne, Android compris. L'adresse à taper est simplement **`http://cdesign.local/`**.
+- **Un clic sur l'icône de l'extension** ouvre la page de réglages : état du serveur, QR code, projets, dossier des exports (l'ouvrir, en choisir un autre), nom de l'adresse, et **démarrage automatique avec le Mac**.
 - Sur le téléphone, l'accueil montre **tes projets avec un aperçu de chaque page** ; touche une page pour l'ouvrir en plein écran.
 - **Les liens entre pages fonctionnent** quand les pages sont dans le même projet.
 - Quand tu remplaces un export, **le téléphone se recharge tout seul**.
@@ -77,7 +78,9 @@ Le terminal affiche l'adresse du serveur, **`http://cdesign.local/`** (et l'adre
 - Pour surveiller un autre dossier : `SUPERDESIGN_DIR=/chemin/vers/dossier npm start`.
 - Le serveur s'annonce sur le Wi-Fi sous le nom `cdesign.local` (Bonjour / mDNS). Pour un autre nom : `SUPERDESIGN_HOST=monnom npm start` → `monnom.local`.
 - Il écoute sur le port 4321 et, quand c'est possible (macOS, Windows), aussi sur le port 80 : d'où l'adresse sans `:4321`. Sous Linux, ce sera `http://cdesign.local:4321/`.
-- iPhone, Mac, Windows et Linux reconnaissent les adresses en `.local`. Certains Android non : utilise alors l'adresse IP affichée en secours (dans le terminal et sous le QR code).
+- Le QR code pointe vers l'adresse IP du Mac, que tous les téléphones savent ouvrir ; l'accueil bascule ensuite tout seul sur `cdesign.local` quand l'appareil reconnaît ce nom (iPhone, Mac, Windows, Linux ; certains Android non).
+- **Démarrage automatique (macOS)** : clique sur l'icône de l'extension, puis active « Démarrer avec le Mac ». Le serveur se lance alors à chaque ouverture de session et redémarre s'il s'arrête : plus besoin de terminal.
+- Le dossier des exports et le nom de l'adresse se changent aussi depuis cette page (enregistrés dans `server/config.json`).
 - Pour changer de port : `PORT=5000 npm start` (le bouton de l'extension attend le port 4321).
 - Au premier lancement, macOS peut demander d'autoriser les connexions entrantes pour `node` : accepte, c'est ce qui permet au téléphone de joindre l'ordinateur.
 
@@ -89,7 +92,7 @@ Le serveur tourne sur macOS, Linux et Windows 10+ (il utilise `unzip`, ou `tar` 
 2. Dépose le zip dans le dossier `super-cdesign-exports/` du projet :
    - un zip à la racine = un projet d'une page ;
    - **un sous-dossier = un projet de plusieurs pages** (par ex. `super-cdesign-exports/MonSite/` avec l'export de l'accueil, de la boutique, du paiement…). Les pages y sont réunies : les liens entre elles fonctionnent.
-3. Clique sur le **bouton téléphone** dans l'en-tête du panneau d'artéfact et scanne le QR code. Le téléphone doit être sur **le même Wi-Fi** que l'ordinateur.
+3. Clique sur le **bouton téléphone** dans l'en-tête du panneau d'artéfact (ou sur l'icône de l'extension) et scanne le QR code. Le téléphone doit être sur **le même Wi-Fi** que l'ordinateur ; n'importe qui sur ce réseau peut ouvrir l'adresse.
 4. Pour mettre à jour : réexporte la frame et remplace le zip dans le dossier. La page ouverte sur le téléphone se recharge seule.
 
 Un lien vers une page pas encore exportée affiche un écran d'explication, qui se met à jour dès que le zip arrive.
@@ -97,7 +100,8 @@ Un lien vers une page pas encore exportée affiche un écran d'explication, qui 
 ## Comment ça marche
 
 - `content.js` tourne sur claude.ai et dans l'iframe du viewer de Claude Design. Il ajoute les boutons, masque les barres de Claude dans l'onglet de présentation et ajoute « Play new tab » au menu PLAY. Les deux contextes communiquent par `postMessage` (origines vérifiées).
-- `background.js` récupère le QR code auprès du serveur local : seul le service worker de l'extension peut joindre `localhost` depuis claude.ai.
+- `background.js` récupère le QR code auprès du serveur local (seul le service worker de l'extension peut joindre `localhost` depuis claude.ai) et ouvre la page de réglages (`settings.html`) au clic sur l'icône.
+- Les réglages du serveur ne répondent qu'à l'extension, sur l'ordinateur lui-même : ni les autres appareils du réseau ni un site web ne peuvent les modifier.
 - `server/server.mjs` surveille le dossier, décompresse les exports, ajoute la balise `viewport` qui manque aux exports (sinon le téléphone affiche la version ordinateur rétrécie), et injecte un petit script de rechargement automatique.
 
 Le dossier `super-cdesign-exports/` et le cache du serveur (`server/.cache/`) sont exclus de git : tes designs ne partent jamais dans le dépôt.

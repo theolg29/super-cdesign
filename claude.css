@@ -71,3 +71,16 @@ html[data-superdesign="on"] body > main {
   font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
   word-break: break-all;
 }
+
+.superdesign-pop__link {
+  display: block;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sd-text);
+  font: 600 12px/1.4 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}

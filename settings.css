@@ -1,0 +1,116 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f5f4f0;
+  --card: #ffffff;
+  --text: #1f1e1d;
+  --muted: #6b6a68;
+  --line: #e4e2dc;
+  --field: #faf9f6;
+  --accent: #d97757;
+  --accent-text: #ffffff;
+  --ok: #3f8f5f;
+  --off: #c2553b;
+  --focus: #d97757;
+  --track: #d6d3cb;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1b1a;
+    --card: #262624;
+    --text: #f1f0ec;
+    --muted: #a3a29d;
+    --line: #34332f;
+    --field: #1f1e1d;
+    --ok: #6cc08a;
+    --off: #ef8a6f;
+    --track: #4a4945;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+main { max-width: 760px; margin: 0 auto; padding: 40px 20px 56px; }
+h1 { font-size: 22px; line-height: 1.2; margin: 0; }
+h2 { font-size: 17px; margin: 0 0 6px; }
+p { margin: 0 0 10px; }
+a { color: inherit; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+.top { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+.top img { border-radius: 10px; flex: none; }
+.top > div { flex: 1; min-width: 0; }
+.top p { margin: 2px 0 0; }
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); white-space: nowrap; }
+.status i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.status[data-state="on"] i { background: var(--ok); }
+.status[data-state="off"] i { background: var(--off); }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; margin-bottom: 16px; }
+.grid-qr { display: grid; grid-template-columns: 200px 1fr; gap: 24px; align-items: center; }
+.qr { background: #fff; border-radius: 12px; padding: 12px; border: 1px solid var(--line); }
+.qr svg { display: block; width: 100%; height: auto; }
+.label { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 2px; }
+.url { font: 600 20px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0 0 4px; word-break: break-all; }
+.url a { text-decoration: none; }
+.url a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.btn { appearance: none; display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid transparent; background: var(--accent); color: var(--accent-text); font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--text); border-color: var(--line); }
+.btn:hover { filter: brightness(1.05); }
+.btn.ghost:hover { background: var(--field); }
+.btn:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.field { padding: 16px 0; border-top: 1px solid var(--line); }
+.field:first-of-type { border-top: 0; padding-top: 8px; }
+.field > label { display: block; font-weight: 600; margin-bottom: 8px; }
+.inline { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; }
+.affix { display: inline-flex; align-items: center; color: var(--muted); font: 14px ui-monospace, SFMono-Regular, Menlo, monospace; }
+input:not([type="checkbox"]) { flex: 1; min-width: 140px; min-height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--field); color: var(--text); font: 14px ui-monospace, SFMono-Regular, Menlo, monospace; }
+#dir-form { margin-top: 10px; }
+.path { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; word-break: break-all; margin: 0; }
+.hint { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+
+.field > label.switch, .switch { display: inline-flex; margin-bottom: 0; align-items: center; gap: 10px; font-weight: 600; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.track { width: 40px; height: 24px; border-radius: 999px; background: var(--track); position: relative; transition: background .15s; flex: none; }
+.thumb { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .15s; }
+.switch input:checked + .track { background: var(--accent); }
+.switch input:checked + .track .thumb { transform: translateX(16px); }
+.switch input:focus-visible + .track { outline: 2px solid var(--focus); outline-offset: 2px; }
+.switch input:disabled + .track { opacity: .5; }
+
+.msg { font-size: 14px; margin: 4px 0 0; }
+.msg:empty { display: none; }
+.msg[data-kind="error"] { color: var(--off); }
+.msg[data-kind="ok"] { color: var(--ok); }
+
+pre { background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; margin: 10px 0 14px; }
+code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.count { color: var(--muted); font-weight: 400; }
+.project { padding: 12px 0; border-top: 1px solid var(--line); }
+.project:first-child { border-top: 0; padding-top: 4px; }
+.project-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.project-head strong { font-size: 15px; }
+.pages { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pages a { font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); text-decoration: none; }
+.pages a:hover { background: var(--field); }
+.empty { color: var(--muted); font-size: 14px; }
+
+footer { text-align: center; margin-top: 28px; }
+
+@media (max-width: 560px) {
+  .grid-qr { grid-template-columns: 1fr; }
+  .qr { max-width: 220px; }
+  .top { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) { .track, .thumb { transition: none; } }

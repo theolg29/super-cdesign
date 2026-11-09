@@ -31,8 +31,21 @@ const run = promisify(execFile);
 const PORT = Number(process.env.PORT) || 4321;
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIR = path.resolve(SERVER_DIR, '..');
-// Dossier des exports, à la racine du projet (exclu de git : il contient des designs clients).
-const WATCH_DIR = path.resolve(process.env.SUPERDESIGN_DIR || path.join(PROJECT_DIR, 'super-cdesign-exports'));
+// Réglages modifiables depuis la page de l'extension, enregistrés dans
+// server/config.json (exclu de git). Les variables d'environnement priment.
+const CONFIG_FILE = path.join(SERVER_DIR, 'config.json');
+const DEFAULT_DIR = path.join(PROJECT_DIR, 'super-cdesign-exports');
+const DEFAULT_HOST = 'cdesign';
+const cleanHost = (h) => String(h || '').toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').slice(0, 40);
+let config = {};
+try {
+  config = JSON.parse(await fs.readFile(CONFIG_FILE, 'utf8'));
+} catch {
+  /* pas encore de réglages */
+}
+const saveConfig = () => fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2) + '\n');
+// Dossier des exports, par défaut à la racine du projet (exclu de git : designs clients).
+let WATCH_DIR = path.resolve(process.env.SUPERDESIGN_DIR || config.dir || DEFAULT_DIR);
 // Sites décompressés, reconstruits à chaque changement (exclu de git).
 const CACHE = path.join(SERVER_DIR, '.cache');
 
@@ -79,42 +92,44 @@ function lanAddress() {
   return pref ? pref.address : '127.0.0.1';
 }
 // Nom annoncé sur le réseau local (Bonjour / mDNS) : http://cdesign.local/
-const HOST = `${(process.env.SUPERDESIGN_HOST || 'cdesign').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'cdesign'}.local`;
+let HOST = `${cleanHost(process.env.SUPERDESIGN_HOST || config.host) || DEFAULT_HOST}.local`;
 let port80 = false; // vrai si le serveur écoute aussi sur le port 80 (adresse sans « :4321 »)
 const portSuffix = () => (port80 ? '' : `:${PORT}`);
 const homeUrl = () => `http://${HOST}${portSuffix()}/`;
 const ipUrl = () => `http://${lanAddress()}${portSuffix()}/`;
 
 // Répond aux requêtes mDNS pour HOST avec l'adresse IPv4 du Mac. iOS, macOS,
-// Windows et Linux résolvent les noms en .local ; Android pas toujours (d'où
-// l'adresse IP affichée en secours).
+// Windows et Linux résolvent les noms en .local ; Android pas toujours : le QR
+// code pointe donc vers l'adresse IP, et l'accueil bascule sur HOST s'il répond.
+let mdns = null;
+const aRecord = () => ({ name: HOST, type: 'A', ttl: 120, flush: true, data: lanAddress() });
+// Réponse négative (NSEC) : « pas d'adresse IPv6 », sinon le client attend
+// une réponse AAAA plusieurs secondes avant de se rabattre sur l'IPv4.
+const noIpv6 = () => ({ name: HOST, type: 'NSEC', ttl: 120, flush: true, data: { nextDomain: HOST, rrtypes: ['A'] } });
+const announce = () => mdns && mdns.respond({ answers: [aRecord()], additionals: [noIpv6()] });
+
 function startMdns() {
-  let mdns;
   try {
     mdns = makeMdns();
   } catch (e) {
     console.warn(`! mDNS indisponible (${e.message}) : utilise l'adresse IP.`);
     return;
   }
-  const answer = () => ({ name: HOST, type: 'A', ttl: 120, flush: true, data: lanAddress() });
-  // Réponse négative (NSEC) : « pas d'adresse IPv6 », sinon le client attend
-  // une réponse AAAA plusieurs secondes avant de se rabattre sur l'IPv4.
-  const noIpv6 = () => ({ name: HOST, type: 'NSEC', ttl: 120, flush: true, data: { nextDomain: HOST, rrtypes: ['A'] } });
   mdns.on('query', (q) => {
     const asked = q.questions.filter((x) => x.name.toLowerCase() === HOST);
     if (!asked.length) return;
-    if (asked.some((x) => x.type === 'A' || x.type === 'ANY')) mdns.respond({ answers: [answer()], additionals: [noIpv6()] });
-    else if (asked.some((x) => x.type === 'AAAA')) mdns.respond({ answers: [noIpv6()], additionals: [answer()] });
+    if (asked.some((x) => x.type === 'A' || x.type === 'ANY')) mdns.respond({ answers: [aRecord()], additionals: [noIpv6()] });
+    else if (asked.some((x) => x.type === 'AAAA')) mdns.respond({ answers: [noIpv6()], additionals: [aRecord()] });
   });
   mdns.on('error', (e) => console.warn(`! mDNS : ${e.message}`));
-  // Annonce au démarrage, puis à chaque changement de réseau éventuel.
-  mdns.respond({ answers: [answer()] });
+  // Annonce au démarrage, puis à chaque changement de réseau.
+  announce();
   let last = lanAddress();
   setInterval(() => {
     const now = lanAddress();
     if (now !== last) {
       last = now;
-      mdns.respond({ answers: [answer()] });
+      announce();
     }
   }, 10000);
 }
@@ -213,9 +228,12 @@ async function buildProject(src) {
     await fs.cp(part, tmp, { recursive: true, force: true });
     await fs.rm(part, { recursive: true, force: true });
   }
+  // Fichiers libres : pages HTML et leurs dossiers de ressources seulement
+  // (jamais tout un dossier quelconque, qui pourrait peser des Go).
   for (const f of files) {
     if (/\.zip$/i.test(f.name)) continue;
-    await fs.cp(f.path, path.join(tmp, f.name), { recursive: true, force: true });
+    const keep = f.isDir ? /^(assets|vendor|images?|img|css|js|fonts?|media)$/i.test(f.name) : /\.(html?|css|js|svg|png|jpe?g|gif|webp|avif|woff2?|ttf|otf)$/i.test(f.name);
+    if (keep) await fs.cp(f.path, path.join(tmp, f.name), { recursive: true, force: true });
   }
 
   // Pages = la frame de chaque export (nommée par son README), même si une
@@ -313,6 +331,127 @@ const scheduleScan = () => {
   timer = setTimeout(scan, 700);
 };
 
+// --- Réglages (page de l'extension) ------------------------------------------------
+
+async function setWatchDir(dir) {
+  await fs.mkdir(dir, { recursive: true });
+  if (!(await fs.stat(dir)).isDirectory()) throw new Error('Ce n’est pas un dossier');
+  if (scanning) await scanning;
+  watcher.close();
+  WATCH_DIR = dir;
+  projects.clear();
+  signatures.clear();
+  await fs.rm(CACHE, { recursive: true, force: true });
+  await fs.mkdir(CACHE, { recursive: true });
+  globalVersion++;
+  watcher = watch(WATCH_DIR, { recursive: true }, scheduleScan);
+  await scan();
+  console.log(`Dossier surveillé : ${WATCH_DIR}`);
+}
+
+function resolveDir(input) {
+  let d = String(input || '').trim();
+  if (!d) return DEFAULT_DIR;
+  if (d === '~' || d.startsWith('~/')) d = path.join(os.homedir(), d.slice(1));
+  if (!path.isAbsolute(d)) throw new Error('Indique un chemin complet (ex. /Users/moi/Exports)');
+  d = path.resolve(d);
+  const forbidden = [path.parse(d).root, os.homedir(), SERVER_DIR, CACHE];
+  if (forbidden.includes(d) || d.startsWith(CACHE + path.sep)) throw new Error('Choisis un dossier dédié aux exports, pas celui-ci');
+  return d;
+}
+
+// Démarrage automatique (macOS) : agent launchd qui relance le serveur à
+// chaque ouverture de session et s'il s'arrête.
+const AGENT_LABEL = 'com.supercdesign.server';
+const AGENT_PLIST = path.join(os.homedir(), 'Library', 'LaunchAgents', `${AGENT_LABEL}.plist`);
+const autostartSupported = process.platform === 'darwin';
+const autostartEnabled = async () => autostartSupported && !!(await fs.stat(AGENT_PLIST).catch(() => null));
+const xml = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+async function enableAutostart(servers) {
+  const logFile = path.join(os.homedir(), 'Library', 'Logs', 'super-cdesign.log');
+  const plist = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>${AGENT_LABEL}</string>
+  <key>ProgramArguments</key><array><string>${xml(process.execPath)}</string><string>${xml(path.join(SERVER_DIR, 'server.mjs'))}</string></array>
+  <key>WorkingDirectory</key><string>${xml(SERVER_DIR)}</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>${xml(logFile)}</string>
+  <key>StandardErrorPath</key><string>${xml(logFile)}</string>
+</dict></plist>
+`;
+  await fs.mkdir(path.dirname(AGENT_PLIST), { recursive: true });
+  await fs.writeFile(AGENT_PLIST, plist);
+  if (process.env.XPC_SERVICE_NAME === AGENT_LABEL) return; // déjà lancé par launchd
+  // Passe la main à launchd : on libère les ports, launchd relance le serveur.
+  setTimeout(async () => {
+    for (const srv of servers) srv.close();
+    if (mdns) mdns.destroy();
+    const uid = process.getuid();
+    await run('launchctl', ['bootout', `gui/${uid}/${AGENT_LABEL}`]).catch(() => {});
+    await run('launchctl', ['bootstrap', `gui/${uid}`, AGENT_PLIST]).catch((e) => console.warn(`! launchctl : ${e.message}`));
+    process.exit(0);
+  }, 300);
+}
+
+async function disableAutostart() {
+  // Le serveur continue de tourner jusqu'à la fin de la session ; il ne
+  // redémarrera simplement plus tout seul.
+  await fs.rm(AGENT_PLIST, { force: true });
+}
+
+function openFolder(dir) {
+  const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'explorer' : 'xdg-open';
+  return run(cmd, [dir]).catch(() => {}); // explorer renvoie un code non nul même quand tout va bien
+}
+
+async function pickFolder() {
+  if (process.platform !== 'darwin') return { unsupported: true };
+  try {
+    const { stdout } = await run('osascript', ['-e', 'POSIX path of (choose folder with prompt "Dossier des exports Super CDesign")']);
+    return { dir: stdout.trim().replace(/\/$/, '') };
+  } catch {
+    return { cancelled: true };
+  }
+}
+
+async function configPayload() {
+  const scanUrl = ipUrl();
+  return {
+    host: HOST.replace(/\.local$/, ''),
+    defaultHost: DEFAULT_HOST,
+    hostLocked: !!process.env.SUPERDESIGN_HOST,
+    url: homeUrl(),
+    ipUrl: scanUrl,
+    port80,
+    svg: await QRCode.toString(scanUrl, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#111111', light: '#ffffff' } }),
+    dir: WATCH_DIR,
+    defaultDir: DEFAULT_DIR,
+    dirLocked: !!process.env.SUPERDESIGN_DIR,
+    platform: process.platform,
+    canPickFolder: process.platform === 'darwin',
+    autostart: { supported: autostartSupported, enabled: await autostartEnabled() },
+    projects: [...projects.values()]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .map((p) => ({ title: p.title, updatedAt: p.updatedAt, pages: p.pages.map((pg) => ({ title: pg.title, url: `${homeUrl()}p/${p.slug}/${encodeURI(pg.file)}` })) })),
+  };
+}
+
+async function readJson(req) {
+  let body = '';
+  for await (const c of req) {
+    body += c;
+    if (body.length > 10000) throw Object.assign(new Error('Requête trop grosse'), { status: 413 });
+  }
+  try {
+    return body ? JSON.parse(body) : {};
+  } catch {
+    throw Object.assign(new Error('JSON invalide'), { status: 400 });
+  }
+}
+
 // --- Pages HTML ---------------------------------------------------------------
 
 const VIEWPORT = '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">';
@@ -392,6 +531,13 @@ ${sections}
   var ro = new ResizeObserver(function(entries){ entries.forEach(function(e){ e.target.style.setProperty('--s', e.contentRect.width / 390); }); });
   document.querySelectorAll('.thumb').forEach(function(t){ ro.observe(t); });
   document.querySelectorAll('.thumb iframe').forEach(function(f){ f.addEventListener('load', function(){ setTimeout(function(){ f.classList.add('ready'); }, 250); }); });
+  // Ouvert par l'adresse IP (QR code) : bascule sur le nom propre s'il répond sur ce téléphone.
+  var nice=${JSON.stringify(homeUrl())};
+  if (location.hostname !== ${JSON.stringify(HOST)}) {
+    var ctl = window.AbortController ? new AbortController() : null;
+    if (ctl) setTimeout(function(){ ctl.abort(); }, 1500);
+    fetch(nice + 'api/ping', { cache: 'no-store', signal: ctl ? ctl.signal : undefined }).then(function(r){ if (r.ok) location.replace(nice); }).catch(function(){});
+  }
   var v=${globalVersion};
   setInterval(function(){fetch('/api/state',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){if(d.version!==v)location.reload()}).catch(function(){})},2000);
 })();
@@ -442,19 +588,74 @@ async function servePage(req, res, p, rest, thumb) {
   res.end(req.method === 'HEAD' ? undefined : data);
 }
 
+const isLocal = (req) => /^(::1|127\.0\.0\.1|::ffff:127\.0\.0\.1)$/.test(req.socket.remoteAddress || '');
+// Requête de l'extension (Origin chrome-extension://) ou d'un outil local sans
+// Origin ; jamais d'un site web ouvert dans le navigateur.
+const trusted = (req) => isLocal(req) && (!req.headers.origin || req.headers.origin.startsWith('chrome-extension://'));
+let altServer = null;
+
 const server = http.createServer(async (req, res) => {
   try {
-    if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, { error: 'Méthode non autorisée' });
     const url = new URL(req.url, 'http://localhost');
     const p = url.pathname;
     let m;
+
+    // Accessible à tous : test de joignabilité de cdesign.local depuis l'accueil.
+    if (p === '/api/ping') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
+      return res.end(JSON.stringify({ ok: true, host: HOST }));
+    }
+
+    // Réglages et QR code : uniquement l'extension, sur ce Mac.
+    if (p === '/api/qr' || p === '/api/config' || p === '/api/open-folder' || p === '/api/pick-folder' || p === '/api/autostart') {
+      if (!trusted(req)) return send(res, 403, { error: 'Réservé à l’extension, sur cet ordinateur' });
+      if (p === '/api/qr' && req.method === 'GET') {
+        const c = await configPayload();
+        return send(res, 200, { url: c.url, ipUrl: c.ipUrl, svg: c.svg, dir: c.dir });
+      }
+      if (p === '/api/config' && req.method === 'GET') return send(res, 200, await configPayload());
+      if (req.method !== 'POST') return send(res, 405, { error: 'Méthode non autorisée' });
+      const body = await readJson(req);
+      if (p === '/api/config') {
+        if (body.host !== undefined && !process.env.SUPERDESIGN_HOST) {
+          const h = cleanHost(body.host);
+          if (!h) return send(res, 400, { error: 'Nom invalide : lettres, chiffres et tirets' });
+          HOST = `${h}.local`;
+          config.host = h === DEFAULT_HOST ? undefined : h;
+          announce();
+        }
+        if (body.dir !== undefined && !process.env.SUPERDESIGN_DIR) {
+          let dir;
+          try {
+            dir = resolveDir(body.dir);
+          } catch (e) {
+            return send(res, 400, { error: e.message });
+          }
+          if (dir !== WATCH_DIR) await setWatchDir(dir);
+          config.dir = dir === DEFAULT_DIR ? undefined : dir;
+        }
+        await saveConfig();
+        return send(res, 200, await configPayload());
+      }
+      if (p === '/api/open-folder') {
+        await openFolder(WATCH_DIR);
+        return send(res, 200, { ok: true });
+      }
+      if (p === '/api/pick-folder') return send(res, 200, await pickFolder());
+      if (p === '/api/autostart') {
+        if (!autostartSupported) return send(res, 400, { error: 'Disponible sur macOS uniquement' });
+        if (body.enabled) {
+          send(res, 200, { ok: true, restarting: true });
+          return enableAutostart([server, altServer].filter(Boolean));
+        }
+        await disableAutostart();
+        return send(res, 200, { ok: true });
+      }
+    }
+
+    if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, { error: 'Méthode non autorisée' });
     if (p === '/') return send(res, 200, homePage(), TYPES['.html']);
     if (p === '/api/state') return send(res, 200, { version: globalVersion });
-    if (p === '/api/qr') {
-      const target = homeUrl();
-      const svg = await QRCode.toString(target, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#111111', light: '#ffffff' } });
-      return send(res, 200, { url: target, ipUrl: ipUrl(), svg, dir: WATCH_DIR, projects: projects.size });
-    }
     if ((m = /^\/api\/version\/([^/]+)$/.exec(p))) {
       const proj = projects.get(m[1]);
       return send(res, 200, proj ? { version: proj.version } : {});
@@ -481,7 +682,7 @@ const server = http.createServer(async (req, res) => {
 await fs.mkdir(WATCH_DIR, { recursive: true });
 await fs.mkdir(CACHE, { recursive: true });
 await scan();
-watch(WATCH_DIR, { recursive: true }, scheduleScan);
+let watcher = watch(WATCH_DIR, { recursive: true }, scheduleScan);
 setInterval(scan, 5000); // filet de sécurité si un événement du système de fichiers est manqué
 
 server.listen(PORT, '0.0.0.0', () => {
@@ -491,6 +692,7 @@ server.listen(PORT, '0.0.0.0', () => {
   alt.once('error', () => report());
   alt.listen(80, '0.0.0.0', () => {
     port80 = true;
+    altServer = alt;
     report();
   });
   startMdns();
